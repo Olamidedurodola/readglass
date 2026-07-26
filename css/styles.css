@@ -309,10 +309,38 @@ button {
   margin-top: 0.35rem;
 }
 
-.guide-note {
-  margin: 0.75rem 0 0;
-  font-size: 0.9rem;
-  line-height: 1.45;
+.bookmarklet-link {
+  display: inline-flex;
+  text-decoration: none;
+  margin: 0.35rem 0.5rem 0.35rem 0;
+}
+
+.listen-setup-card {
+  margin: 0 0 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--paper-elevated);
+  display: grid;
+  gap: 0.65rem;
+}
+
+.listen-setup-card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+.listen-setup-card textarea {
+  width: 100%;
+  min-height: 180px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  padding: 0.9rem 1rem;
+  font-family: var(--font-read);
+  line-height: 1.5;
+  resize: vertical;
 }
 
 .capture-targets {

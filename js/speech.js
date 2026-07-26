@@ -2,10 +2,30 @@ const RATE_MIN = 0.7;
 const RATE_MAX = 1.6;
 const RATE_STEP = 0.1;
 
+function chunkText(text) {
+  const parts = String(text)
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const chunks = [];
+  let buf = "";
+  for (const part of parts) {
+    if ((buf + " " + part).trim().length > 1600) {
+      if (buf) chunks.push(buf.trim());
+      buf = part;
+    } else {
+      buf = buf ? `${buf} ${part}` : part;
+    }
+  }
+  if (buf.trim()) chunks.push(buf.trim());
+  return chunks.length ? chunks : [String(text).trim()];
+}
+
 export function createNarrator({ onEnd, onStateChange } = {}) {
-  let utterance = null;
   let playing = false;
   let paused = false;
+  let queue = [];
+  let continueBook = true;
   let rate = Number(localStorage.getItem("rg-speech-rate") || 1);
 
   function emit() {
@@ -29,13 +49,37 @@ export function createNarrator({ onEnd, onStateChange } = {}) {
   function stop() {
     if (!isSupported()) return;
     speechSynthesis.cancel();
-    utterance = null;
+    queue = [];
     playing = false;
     paused = false;
     emit();
   }
 
-  function speak(text, { continueBook = true } = {}) {
+  function speakQueue() {
+    if (!queue.length) {
+      playing = false;
+      paused = false;
+      emit();
+      if (continueBook) onEnd?.();
+      return;
+    }
+
+    const text = queue.shift();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = rate;
+    const voice = pickVoice();
+    if (voice) utterance.voice = voice;
+
+    utterance.onend = () => speakQueue();
+    utterance.onerror = () => speakQueue();
+
+    playing = true;
+    paused = false;
+    emit();
+    speechSynthesis.speak(utterance);
+  }
+
+  function speak(text, options = {}) {
     if (!isSupported()) {
       throw new Error("Text-to-speech is not supported in this browser.");
     }
@@ -44,28 +88,10 @@ export function createNarrator({ onEnd, onStateChange } = {}) {
       throw new Error("This page has no text to read aloud.");
     }
 
+    continueBook = options.continueBook !== false;
     stop();
-    utterance = new SpeechSynthesisUtterance(cleaned);
-    utterance.rate = rate;
-    const voice = pickVoice();
-    if (voice) utterance.voice = voice;
-
-    utterance.onend = () => {
-      playing = false;
-      paused = false;
-      emit();
-      if (continueBook) onEnd?.();
-    };
-    utterance.onerror = () => {
-      playing = false;
-      paused = false;
-      emit();
-    };
-
-    playing = true;
-    paused = false;
-    emit();
-    speechSynthesis.speak(utterance);
+    queue = chunkText(cleaned);
+    speakQueue();
   }
 
   function pause() {
@@ -98,7 +124,6 @@ export function createNarrator({ onEnd, onStateChange } = {}) {
   function setRate(next) {
     rate = Math.min(RATE_MAX, Math.max(RATE_MIN, Number(next.toFixed(1))));
     localStorage.setItem("rg-speech-rate", String(rate));
-    if (utterance) utterance.rate = rate;
     emit();
   }
 

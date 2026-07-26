@@ -55,10 +55,10 @@
         <section class="view" id="libraryView">
           <div class="hero">
             <h1 class="hero-brand">ReadGlass</h1>
-            <p class="hero-copy">Screenshot Stelar in your browser. Read and listen here.</p>
+            <p class="hero-copy">For long books: listen on the page — no screenshots needed.</p>
             <div class="hero-actions">
-              <button class="btn btn-primary" id="newBookBtn">New book</button>
-              <button class="btn btn-ghost" id="quickCaptureBtn">Read screen</button>
+              <button class="btn btn-primary" id="justListenBtn">Just listen</button>
+              <button class="btn btn-ghost" id="quickCaptureBtn">Screenshots</button>
             </div>
           </div>
           <div class="section-head">
@@ -67,8 +67,52 @@
           </div>
           <div class="book-grid" id="bookGrid"></div>
           <p class="empty" id="libraryEmpty" hidden>
-            No books yet. Capture a page from your screen or camera to start.
+            No books yet. Tap <strong>Just listen</strong> for long books.
           </p>
+          <div class="hero-actions" style="margin-top: 0.75rem">
+            <button class="btn btn-ghost" id="newBookBtn" type="button">New book</button>
+          </div>
+        </section>
+
+        <!-- Just listen -->
+        <section class="view" id="listenSetupView" hidden>
+          <div class="section-head">
+            <h2>Listen without screenshots</h2>
+          </div>
+          <aside class="stelar-guide">
+            <strong>Best for 1000+ pages</strong>
+            <ol>
+              <li>Open your book in the <em>browser</em> (Stelar website), not the app.</li>
+              <li>Install the Listen bookmark (below).</li>
+              <li>On each chapter page, tap the bookmark → <strong>Listen</strong>.</li>
+              <li>Leave <em>Auto next</em> on to continue when a chapter ends.</li>
+            </ol>
+          </aside>
+
+          <div class="listen-setup-card">
+            <h3>1. Install Listen bookmark</h3>
+            <p class="muted">
+              Drag this button to your bookmarks bar (desktop). On phone: copy the link, create a new bookmark, paste it as the URL.
+            </p>
+            <a class="btn btn-primary bookmarklet-link" id="bookmarkletLink" href="#">Listen page</a>
+            <button class="btn btn-ghost" id="copyBookmarkletBtn" type="button">Copy bookmark code</button>
+            <p class="muted" id="bookmarkCopyStatus" hidden></p>
+          </div>
+
+          <div class="listen-setup-card">
+            <h3>2. Or paste chapter text</h3>
+            <p class="muted">If you can copy text from the chapter, paste it here and listen immediately.</p>
+            <textarea id="pasteListenText" rows="10" placeholder="Paste chapter text here…"></textarea>
+            <div class="editor-actions">
+              <button class="btn btn-ghost" id="savePasteBtn" type="button">Save to library</button>
+              <button class="btn btn-primary" id="speakPasteBtn" type="button">Listen now</button>
+            </div>
+          </div>
+
+          <p class="muted capture-hint">
+            Screenshots are only for short bits. A full book needs Listen-on-page or pasted text.
+          </p>
+          <button class="btn btn-ghost" id="newBookFromListenBtn" type="button">New book in library</button>
         </section>
 
         <!-- Capture -->

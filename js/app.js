@@ -10,6 +10,7 @@ import {
 } from "./db.js";
 import { ScreenSession, recognizeImage, supportsScreenCapture } from "./ocr.js";
 import { createNarrator } from "./speech.js";
+import { getBookmarkletHref } from "./bookmarklet.js";
 
 const THEMES = ["night", "paper", "sepia"];
 const FONT_MIN = 1;
@@ -42,14 +43,23 @@ const els = {
   themeBtn: document.getElementById("themeBtn"),
   installBtn: document.getElementById("installBtn"),
   libraryView: document.getElementById("libraryView"),
+  listenSetupView: document.getElementById("listenSetupView"),
   captureView: document.getElementById("captureView"),
   bookView: document.getElementById("bookView"),
   readerView: document.getElementById("readerView"),
   newBookBtn: document.getElementById("newBookBtn"),
+  justListenBtn: document.getElementById("justListenBtn"),
   quickCaptureBtn: document.getElementById("quickCaptureBtn"),
   bookGrid: document.getElementById("bookGrid"),
   libraryEmpty: document.getElementById("libraryEmpty"),
   bookCount: document.getElementById("bookCount"),
+  bookmarkletLink: document.getElementById("bookmarkletLink"),
+  copyBookmarkletBtn: document.getElementById("copyBookmarkletBtn"),
+  bookmarkCopyStatus: document.getElementById("bookmarkCopyStatus"),
+  pasteListenText: document.getElementById("pasteListenText"),
+  speakPasteBtn: document.getElementById("speakPasteBtn"),
+  savePasteBtn: document.getElementById("savePasteBtn"),
+  newBookFromListenBtn: document.getElementById("newBookFromListenBtn"),
   captureTitle: document.getElementById("captureTitle"),
   captureHint: document.getElementById("captureHint"),
   captureTargets: document.getElementById("captureTargets"),
@@ -171,11 +181,19 @@ function showView(view) {
   if (view !== "capture") stopLiveSession();
   state.view = view;
   els.libraryView.hidden = view !== "library";
+  els.listenSetupView.hidden = view !== "listenSetup";
   els.captureView.hidden = view !== "capture";
   els.bookView.hidden = view !== "book";
   els.readerView.hidden = view !== "reader";
   els.backBtn.hidden = view === "library";
   els.brandMark.hidden = view !== "library";
+}
+
+function openListenSetup() {
+  if (els.bookmarkletLink) {
+    els.bookmarkletLink.href = getBookmarkletHref();
+  }
+  showView("listenSetup");
 }
 
 function formatDate(ts) {
@@ -478,8 +496,8 @@ function exportBook() {
 
 function wireEvents() {
   els.backBtn.addEventListener("click", async () => {
-    if (state.view === "reader" || state.view === "capture") {
-      if (state.currentBookId || state.captureBookId) {
+    if (state.view === "reader" || state.view === "capture" || state.view === "listenSetup") {
+      if ((state.view === "reader" || state.view === "capture") && (state.currentBookId || state.captureBookId)) {
         await refreshLibrary();
         await openBook(state.currentBookId || state.captureBookId);
         return;
@@ -500,7 +518,61 @@ function wireEvents() {
     applyTheme();
   });
 
-  els.newBookBtn.addEventListener("click", () => {
+  els.justListenBtn?.addEventListener("click", () => openListenSetup());
+  els.bookmarkletLink?.addEventListener("click", (event) => {
+    // This link is meant to be bookmarked, not opened as a page.
+    event.preventDefault();
+    els.bookmarkCopyStatus.hidden = false;
+    els.bookmarkCopyStatus.textContent = "Don’t open it here — drag to bookmarks, or tap Copy bookmark code.";
+  });
+  els.newBookFromListenBtn?.addEventListener("click", () => {
+    els.newBookTitle.value = "";
+    els.newBookModal.showModal();
+    els.newBookTitle.focus();
+  });
+
+  els.copyBookmarkletBtn?.addEventListener("click", async () => {
+    const href = getBookmarkletHref();
+    try {
+      await navigator.clipboard.writeText(href);
+      els.bookmarkCopyStatus.hidden = false;
+      els.bookmarkCopyStatus.textContent = "Copied. Create a bookmark and paste this as the URL.";
+    } catch {
+      els.bookmarkCopyStatus.hidden = false;
+      els.bookmarkCopyStatus.textContent = "Could not copy. Long-press the Listen page button and copy the link.";
+    }
+  });
+
+  els.speakPasteBtn?.addEventListener("click", () => {
+    const text = els.pasteListenText.value.trim();
+    if (!text) {
+      alert("Paste some chapter text first.");
+      return;
+    }
+    try {
+      state.autoListen = false;
+      narrator.speak(text, { continueBook: false });
+    } catch (error) {
+      alert(error.message || "Could not start listening.");
+    }
+  });
+
+  els.savePasteBtn?.addEventListener("click", async () => {
+    const text = els.pasteListenText.value.trim();
+    if (!text) {
+      alert("Paste some chapter text first.");
+      return;
+    }
+    const bookId = state.captureBookId || state.currentBookId || (await createBook(`Stelar ${formatDate(Date.now())}`)).id;
+    state.captureBookId = bookId;
+    state.currentBookId = bookId;
+    await addPage(bookId, text);
+    els.pasteListenText.value = "";
+    await refreshLibrary();
+    await openBook(bookId);
+  });
+
+  els.newBookBtn?.addEventListener("click", () => {
     els.newBookTitle.value = "";
     els.newBookModal.showModal();
     els.newBookTitle.focus();
