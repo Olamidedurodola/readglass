@@ -55,7 +55,7 @@
         <section class="view" id="libraryView">
           <div class="hero">
             <h1 class="hero-brand">ReadGlass</h1>
-            <p class="hero-copy">Use Stelar in Chrome — snap pages here, then read or listen.</p>
+            <p class="hero-copy">Screenshot Stelar in your browser. Read and listen here.</p>
             <div class="hero-actions">
               <button class="btn btn-primary" id="newBookBtn">New book</button>
               <button class="btn btn-ghost" id="quickCaptureBtn">Read screen</button>
@@ -78,33 +78,36 @@
           </div>
 
           <aside class="stelar-guide" id="stelarGuide">
-            <strong>Stelar workflow</strong>
+            <strong>Stelar on phone</strong>
             <ol>
-              <li>Open Stelar in <em>Chrome</em> (website) — not the Stelar app (app blocks screenshots).</li>
-              <li><strong>Computer:</strong> Live screen → share the Stelar Chrome tab → Snap each page.</li>
-              <li><strong>Phone:</strong> In Chrome, screenshot the page → Screenshot or Paste here.</li>
+              <li>Open Stelar in your <em>mobile browser</em> (Chrome/Safari) — not the Stelar app.</li>
+              <li>Screenshot the page.</li>
+              <li>Tap <strong>Add screenshot</strong> below and pick it (you can select several).</li>
             </ol>
+            <p class="guide-note muted" id="desktopGuideNote" hidden>
+              On a computer you can also use <strong>Live screen</strong> to share the Stelar Chrome tab.
+            </p>
           </aside>
 
           <p class="capture-hint muted" id="captureHint"></p>
 
           <div class="capture-targets" id="captureTargets">
-            <button class="capture-card capture-card-primary" id="screenCaptureBtn" type="button" hidden>
-              <strong>Live screen</strong>
-              <span>Share Stelar’s Chrome tab, then snap pages as you turn them</span>
-            </button>
             <label class="capture-card capture-card-primary" for="fileInput">
-              <strong>Chrome screenshot</strong>
-              <span>Best on phone — screenshot Stelar in Chrome, then pick it here</span>
-              <input id="fileInput" type="file" accept="image/*" hidden />
+              <strong>Add screenshot</strong>
+              <span>Pick one or more screenshots from your browser</span>
+              <input id="fileInput" type="file" accept="image/*" multiple hidden />
             </label>
             <button class="capture-card" id="pasteCaptureBtn" type="button">
               <strong>Paste</strong>
               <span>Paste a copied screenshot</span>
             </button>
+            <button class="capture-card" id="screenCaptureBtn" type="button" hidden>
+              <strong>Live screen</strong>
+              <span>Desktop: share Stelar’s Chrome tab and snap pages</span>
+            </button>
             <label class="capture-card" for="cameraInput">
               <strong>Camera</strong>
-              <span>Only if you can point another device at the screen</span>
+              <span>Photo of a page if needed</span>
               <input id="cameraInput" type="file" accept="image/*" capture="environment" hidden />
             </label>
           </div>

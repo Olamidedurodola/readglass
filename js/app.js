@@ -324,10 +324,12 @@ function showLiveSession(videoEl) {
 function configureCaptureOptions() {
   const canScreen = supportsScreenCapture();
   els.screenCaptureBtn.hidden = !canScreen;
+  const desktopNote = document.getElementById("desktopGuideNote");
+  if (desktopNote) desktopNote.hidden = !canScreen;
   if (els.captureHint) {
     els.captureHint.textContent = canScreen
-      ? "Tip: share the Stelar website tab in Chrome, not the ReadGlass tab."
-      : "Phones can’t live-share a tab. Open Stelar in Chrome → screenshot → pick it below.";
+      ? "Phone: add screenshots from your browser. Computer: Live screen also works."
+      : "Screenshot Stelar in your browser, then tap Add screenshot.";
   }
 }
 
@@ -565,9 +567,40 @@ function wireEvents() {
   });
 
   els.fileInput.addEventListener("change", async () => {
-    const file = els.fileInput.files?.[0];
+    const files = [...(els.fileInput.files || [])];
     els.fileInput.value = "";
-    if (file) await runOcr(file);
+    if (!files.length) return;
+
+    // One screenshot: OCR now. Several: OCR + save each, then open the book.
+    if (files.length === 1) {
+      await runOcr(files[0]);
+      return;
+    }
+
+    const bookId = await ensureCaptureBook();
+    for (let i = 0; i < files.length; i += 1) {
+      els.previewWrap.hidden = false;
+      els.ocrProgress.hidden = false;
+      els.textEditor.hidden = true;
+      const url = URL.createObjectURL(files[i]);
+      if (state.pendingImageUrl) URL.revokeObjectURL(state.pendingImageUrl);
+      state.pendingImageUrl = url;
+      els.previewImage.src = url;
+      els.ocrStatus.textContent = `Reading screenshot ${i + 1} of ${files.length}…`;
+      els.ocrBar.style.width = "8%";
+      try {
+        const text = await recognizeImage(files[i], (progress) => {
+          const pct = Math.max(8, Math.round(progress * 100));
+          els.ocrBar.style.width = `${pct}%`;
+        });
+        if (text) await addPage(bookId, text);
+      } catch (error) {
+        alert(error.message || `Could not read screenshot ${i + 1}.`);
+      }
+    }
+    resetCaptureUi();
+    await refreshLibrary();
+    await openBook(bookId);
   });
 
   els.recaptureBtn.addEventListener("click", () => {
