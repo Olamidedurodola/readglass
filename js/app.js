@@ -8,7 +8,7 @@ import {
   renameBook,
   updatePage,
 } from "./db.js";
-import { captureScreenFrame, recognizeImage } from "./ocr.js";
+import { ScreenSession, recognizeImage, supportsScreenCapture } from "./ocr.js";
 import { createNarrator } from "./speech.js";
 
 const THEMES = ["night", "paper", "sepia"];
@@ -30,6 +30,12 @@ const state = {
   autoListen: false,
 };
 
+const screenSession = new ScreenSession();
+screenSession.onEnded = () => {
+  hideLiveSession();
+  configureCaptureOptions();
+};
+
 const els = {
   backBtn: document.getElementById("backBtn"),
   brandMark: document.getElementById("brandMark"),
@@ -46,10 +52,16 @@ const els = {
   bookCount: document.getElementById("bookCount"),
   captureTitle: document.getElementById("captureTitle"),
   captureHint: document.getElementById("captureHint"),
+  captureTargets: document.getElementById("captureTargets"),
   screenCaptureBtn: document.getElementById("screenCaptureBtn"),
   pasteCaptureBtn: document.getElementById("pasteCaptureBtn"),
   cameraInput: document.getElementById("cameraInput"),
   fileInput: document.getElementById("fileInput"),
+  liveSession: document.getElementById("liveSession"),
+  liveVideo: document.getElementById("liveVideo"),
+  liveStatus: document.getElementById("liveStatus"),
+  snapLiveBtn: document.getElementById("snapLiveBtn"),
+  stopLiveBtn: document.getElementById("stopLiveBtn"),
   previewWrap: document.getElementById("previewWrap"),
   previewImage: document.getElementById("previewImage"),
   ocrProgress: document.getElementById("ocrProgress"),
@@ -59,6 +71,7 @@ const els = {
   ocrText: document.getElementById("ocrText"),
   recaptureBtn: document.getElementById("recaptureBtn"),
   savePageBtn: document.getElementById("savePageBtn"),
+  saveNextBtn: document.getElementById("saveNextBtn"),
   bookTitleInput: document.getElementById("bookTitleInput"),
   pageCountLabel: document.getElementById("pageCountLabel"),
   pageList: document.getElementById("pageList"),
@@ -155,6 +168,7 @@ function applyFont() {
 
 function showView(view) {
   if (view !== "reader") stopListening();
+  if (view !== "capture") stopLiveSession();
   state.view = view;
   els.libraryView.hidden = view !== "library";
   els.captureView.hidden = view !== "capture";
@@ -271,19 +285,40 @@ function renderReader({ keepListening = false } = {}) {
   updateListenUi();
 }
 
-function resetCaptureUi() {
+function resetCaptureUi({ keepLive = false } = {}) {
   if (state.pendingImageUrl) URL.revokeObjectURL(state.pendingImageUrl);
   state.pendingImageUrl = null;
   els.previewWrap.hidden = true;
   els.ocrProgress.hidden = true;
   els.textEditor.hidden = true;
+  els.saveNextBtn.hidden = true;
   els.ocrText.value = "";
   els.ocrBar.style.width = "0%";
   els.previewImage.removeAttribute("src");
+  if (!keepLive) {
+    stopLiveSession();
+    if (els.captureTargets) els.captureTargets.hidden = false;
+  }
 }
 
-function supportsScreenCapture() {
-  return Boolean(navigator.mediaDevices?.getDisplayMedia);
+function hideLiveSession() {
+  if (els.liveSession) els.liveSession.hidden = true;
+  if (els.liveVideo) els.liveVideo.srcObject = null;
+  if (els.captureTargets) els.captureTargets.hidden = false;
+}
+
+function stopLiveSession() {
+  screenSession.stop();
+  hideLiveSession();
+}
+
+function showLiveSession(videoEl) {
+  els.captureTargets.hidden = true;
+  els.liveSession.hidden = false;
+  els.liveVideo.srcObject = videoEl.srcObject;
+  els.liveStatus.textContent = "Connected — open Stelar, then Snap page";
+  els.previewWrap.hidden = true;
+  els.textEditor.hidden = true;
 }
 
 function configureCaptureOptions() {
@@ -291,14 +326,14 @@ function configureCaptureOptions() {
   els.screenCaptureBtn.hidden = !canScreen;
   if (els.captureHint) {
     els.captureHint.textContent = canScreen
-      ? "Desktop: use Screen to share a tab. Phone: use Camera, Screenshot, or Paste."
-      : "On iPhone: screenshot the ebook page, then tap Screenshot or Paste below.";
+      ? "Tip: share the Stelar website tab in Chrome, not the ReadGlass tab."
+      : "Phones can’t live-share a tab. Open Stelar in Chrome → screenshot → pick it below.";
   }
 }
 
 async function pasteImageFromClipboard() {
   if (!navigator.clipboard?.read) {
-    throw new Error("Clipboard paste isn’t available here. Use Screenshot or Camera instead.");
+    throw new Error("Clipboard paste isn’t available here. Use Chrome screenshot instead.");
   }
   const items = await navigator.clipboard.read();
   for (const item of items) {
@@ -307,19 +342,51 @@ async function pasteImageFromClipboard() {
     const blob = await item.getType(type);
     return blob;
   }
-  throw new Error("No image on the clipboard. Screenshot a page, copy it, then try Paste again.");
+  throw new Error("No image on the clipboard. Screenshot Stelar in Chrome, copy it, then Paste.");
 }
 
 function openCapture(bookId, title) {
   state.captureBookId = bookId;
-  els.captureTitle.textContent = title ? `Capture · ${title}` : "Capture page";
+  els.captureTitle.textContent = title ? `Capture · ${title}` : "Read screen";
   configureCaptureOptions();
   resetCaptureUi();
   showView("capture");
 }
 
-async function runOcr(blobOrFile) {
-  resetCaptureUi();
+async function startLiveScreen() {
+  try {
+    els.liveStatus.textContent = "Choose the Stelar Chrome tab…";
+    const video = await screenSession.start();
+    showLiveSession(video);
+  } catch (error) {
+    stopLiveSession();
+    if (error?.name === "NotAllowedError") return;
+    alert(error.message || "Could not start live screen.");
+  }
+}
+
+async function snapLiveScreen() {
+  try {
+    els.snapLiveBtn.disabled = true;
+    els.liveStatus.textContent = "Snapping…";
+    const blob = await screenSession.snap();
+    await runOcr(blob, { fromLive: true });
+    els.liveStatus.textContent = "Snapped — edit text, then Save & next";
+  } catch (error) {
+    els.liveStatus.textContent = "Snap failed";
+    alert(error.message || "Snap failed.");
+  } finally {
+    els.snapLiveBtn.disabled = false;
+  }
+}
+
+async function runOcr(blobOrFile, { fromLive = false } = {}) {
+  if (state.pendingImageUrl) URL.revokeObjectURL(state.pendingImageUrl);
+  state.pendingImageUrl = null;
+  els.ocrText.value = "";
+  els.textEditor.hidden = true;
+  els.saveNextBtn.hidden = !fromLive;
+
   const url = URL.createObjectURL(blobOrFile);
   state.pendingImageUrl = url;
   els.previewImage.src = url;
@@ -328,6 +395,12 @@ async function runOcr(blobOrFile) {
   els.ocrStatus.textContent = "Reading text…";
   els.ocrBar.style.width = "4%";
 
+  if (fromLive) {
+    els.liveSession.hidden = false;
+  } else {
+    stopLiveSession();
+  }
+
   try {
     const text = await recognizeImage(blobOrFile, (progress) => {
       const pct = Math.max(4, Math.round(progress * 100));
@@ -335,9 +408,12 @@ async function runOcr(blobOrFile) {
       els.ocrStatus.textContent = `Reading text… ${pct}%`;
     });
     els.ocrBar.style.width = "100%";
-    els.ocrStatus.textContent = text ? "Done. Fix any OCR mistakes below." : "No text found. Try a clearer capture.";
+    els.ocrStatus.textContent = text
+      ? "Done. Fix any OCR mistakes below."
+      : "No text found. Try a clearer Chrome screenshot.";
     els.ocrText.value = text;
     els.textEditor.hidden = false;
+    els.saveNextBtn.hidden = !screenSession.active;
   } catch (error) {
     els.ocrStatus.textContent = error.message || "OCR failed.";
     alert(error.message || "OCR failed.");
@@ -346,13 +422,13 @@ async function runOcr(blobOrFile) {
 
 async function ensureCaptureBook() {
   if (state.captureBookId) return state.captureBookId;
-  const book = await createBook(`Capture ${formatDate(Date.now())}`);
+  const book = await createBook(`Stelar ${formatDate(Date.now())}`);
   state.captureBookId = book.id;
   state.currentBookId = book.id;
   return book.id;
 }
 
-async function saveCapturedPage() {
+async function saveCapturedPage({ continueLive = false } = {}) {
   const text = els.ocrText.value.trim();
   if (!text) {
     alert("Add some text before saving.");
@@ -360,8 +436,22 @@ async function saveCapturedPage() {
   }
   const bookId = await ensureCaptureBook();
   await addPage(bookId, text);
-  resetCaptureUi();
   await refreshLibrary();
+
+  if (continueLive && screenSession.active) {
+    if (state.pendingImageUrl) URL.revokeObjectURL(state.pendingImageUrl);
+    state.pendingImageUrl = null;
+    els.previewWrap.hidden = true;
+    els.ocrProgress.hidden = true;
+    els.textEditor.hidden = true;
+    els.saveNextBtn.hidden = true;
+    els.ocrText.value = "";
+    els.liveSession.hidden = false;
+    els.liveStatus.textContent = "Saved — flip the page in Stelar, then Snap";
+    return;
+  }
+
+  resetCaptureUi();
   await openBook(bookId);
 }
 
@@ -431,17 +521,14 @@ function wireEvents() {
 
   els.quickCaptureBtn.addEventListener("click", () => {
     state.currentBookId = null;
-    openCapture(null, "Quick capture");
+    openCapture(null, "Read screen");
   });
 
-  els.screenCaptureBtn.addEventListener("click", async () => {
-    try {
-      const blob = await captureScreenFrame();
-      await runOcr(blob);
-    } catch (error) {
-      if (error?.name === "NotAllowedError") return;
-      alert(error.message || "Screen capture failed.");
-    }
+  els.screenCaptureBtn.addEventListener("click", () => startLiveScreen());
+  els.snapLiveBtn.addEventListener("click", () => snapLiveScreen());
+  els.stopLiveBtn.addEventListener("click", () => {
+    stopLiveSession();
+    configureCaptureOptions();
   });
 
   els.pasteCaptureBtn.addEventListener("click", async () => {
@@ -450,14 +537,14 @@ function wireEvents() {
       await runOcr(blob);
     } catch (error) {
       if (error?.name === "NotAllowedError") {
-        alert("Allow clipboard access, or use Screenshot / Camera instead.");
+        alert("Allow clipboard access, or use Chrome screenshot instead.");
         return;
       }
       alert(error.message || "Paste failed.");
     }
   });
 
-  // iOS-friendly: paste image with Cmd/Ctrl+V while on capture view
+  // Paste image with Cmd/Ctrl+V while on capture view
   window.addEventListener("paste", async (event) => {
     if (state.view !== "capture") return;
     const items = event.clipboardData?.items;
@@ -483,8 +570,16 @@ function wireEvents() {
     if (file) await runOcr(file);
   });
 
-  els.recaptureBtn.addEventListener("click", () => resetCaptureUi());
-  els.savePageBtn.addEventListener("click", () => saveCapturedPage());
+  els.recaptureBtn.addEventListener("click", () => {
+    if (screenSession.active) {
+      resetCaptureUi({ keepLive: true });
+      showLiveSession(screenSession.video);
+      return;
+    }
+    resetCaptureUi();
+  });
+  els.savePageBtn.addEventListener("click", () => saveCapturedPage({ continueLive: false }));
+  els.saveNextBtn.addEventListener("click", () => saveCapturedPage({ continueLive: true }));
 
   els.addPageBtn.addEventListener("click", () => {
     const book = state.books.find((b) => b.id === state.currentBookId);

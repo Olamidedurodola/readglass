@@ -11,15 +11,12 @@ Personal PWA that turns screen captures and photos into readable text pages. Eve
 - **Listen** mode (browser text-to-speech) with speed control and auto-advance
 - Installable as a Progressive Web App
 
-## Use it
+## Use it with Stelar
 
-1. Open the app on your phone or desktop
-2. Create a book (or use Quick capture)
-3. Capture the page you’re reading
-4. Fix any OCR mistakes, then save
-5. Read offline from your library
-
-On iPhone: Safari → Share → **Add to Home Screen**.
+1. Open Stelar in **Chrome (website)** — the Stelar app blocks screenshots.
+2. **Computer:** Read screen → **Live screen** → share the Stelar tab → **Snap page** for each page → **Save & next**.
+3. **Phone:** In Chrome, take a screenshot → **Chrome screenshot** (or Paste) in ReadGlass.
+4. Read or **Listen** from your library.
 
 ## Local preview
 

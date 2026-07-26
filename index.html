@@ -55,10 +55,10 @@
         <section class="view" id="libraryView">
           <div class="hero">
             <h1 class="hero-brand">ReadGlass</h1>
-            <p class="hero-copy">Point it at a page. Keep the words.</p>
+            <p class="hero-copy">Use Stelar in Chrome — snap pages here, then read or listen.</p>
             <div class="hero-actions">
               <button class="btn btn-primary" id="newBookBtn">New book</button>
-              <button class="btn btn-ghost" id="quickCaptureBtn">Quick capture</button>
+              <button class="btn btn-ghost" id="quickCaptureBtn">Read screen</button>
             </div>
           </div>
           <div class="section-head">
@@ -76,28 +76,52 @@
           <div class="section-head">
             <h2 id="captureTitle">Capture page</h2>
           </div>
-          <p class="capture-hint muted" id="captureHint">
-            On iPhone: screenshot the ebook page, then tap Screenshot or Paste below.
-          </p>
-          <div class="capture-targets">
-            <label class="capture-card" for="cameraInput">
-              <strong>Camera</strong>
-              <span>Snap the page on your phone</span>
-              <input id="cameraInput" type="file" accept="image/*" capture="environment" hidden />
-            </label>
-            <label class="capture-card" for="fileInput">
-              <strong>Screenshot</strong>
-              <span>Choose a photo or screenshot</span>
+
+          <aside class="stelar-guide" id="stelarGuide">
+            <strong>Stelar workflow</strong>
+            <ol>
+              <li>Open Stelar in <em>Chrome</em> (website) — not the Stelar app (app blocks screenshots).</li>
+              <li><strong>Computer:</strong> Live screen → share the Stelar Chrome tab → Snap each page.</li>
+              <li><strong>Phone:</strong> In Chrome, screenshot the page → Screenshot or Paste here.</li>
+            </ol>
+          </aside>
+
+          <p class="capture-hint muted" id="captureHint"></p>
+
+          <div class="capture-targets" id="captureTargets">
+            <button class="capture-card capture-card-primary" id="screenCaptureBtn" type="button" hidden>
+              <strong>Live screen</strong>
+              <span>Share Stelar’s Chrome tab, then snap pages as you turn them</span>
+            </button>
+            <label class="capture-card capture-card-primary" for="fileInput">
+              <strong>Chrome screenshot</strong>
+              <span>Best on phone — screenshot Stelar in Chrome, then pick it here</span>
               <input id="fileInput" type="file" accept="image/*" hidden />
             </label>
             <button class="capture-card" id="pasteCaptureBtn" type="button">
               <strong>Paste</strong>
-              <span>Paste an image from your clipboard</span>
+              <span>Paste a copied screenshot</span>
             </button>
-            <button class="capture-card" id="screenCaptureBtn" type="button" hidden>
-              <strong>Screen</strong>
-              <span>Share a window or tab (desktop)</span>
-            </button>
+            <label class="capture-card" for="cameraInput">
+              <strong>Camera</strong>
+              <span>Only if you can point another device at the screen</span>
+              <input id="cameraInput" type="file" accept="image/*" capture="environment" hidden />
+            </label>
+          </div>
+
+          <div class="live-session" id="liveSession" hidden>
+            <div class="live-head">
+              <strong>Live screen</strong>
+              <span class="muted" id="liveStatus">Share the Stelar tab in Chrome</span>
+            </div>
+            <video id="liveVideo" class="live-video" muted playsinline autoplay></video>
+            <p class="live-tip muted">
+              Flip to the next page in Stelar, then tap Snap. If the preview is black, use Chrome screenshot instead.
+            </p>
+            <div class="editor-actions">
+              <button class="btn btn-ghost" id="stopLiveBtn" type="button">Stop sharing</button>
+              <button class="btn btn-primary" id="snapLiveBtn" type="button">Snap page</button>
+            </div>
           </div>
 
           <div class="preview-wrap" id="previewWrap" hidden>
@@ -114,6 +138,7 @@
             <div class="editor-actions">
               <button class="btn btn-ghost" id="recaptureBtn" type="button">Recapture</button>
               <button class="btn btn-primary" id="savePageBtn" type="button">Save page</button>
+              <button class="btn btn-primary" id="saveNextBtn" type="button" hidden>Save &amp; next</button>
             </div>
           </div>
         </section>

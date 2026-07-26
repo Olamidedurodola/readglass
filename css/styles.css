@@ -283,9 +283,70 @@ button {
   line-height: 1.45;
 }
 
+.stelar-guide {
+  margin: 0 0 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+  background: color-mix(in srgb, var(--accent) 10%, var(--paper-elevated));
+}
+
+.stelar-guide strong {
+  display: block;
+  margin-bottom: 0.45rem;
+  letter-spacing: -0.02em;
+}
+
+.stelar-guide ol {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: var(--ink-muted);
+  line-height: 1.5;
+  font-size: 0.94rem;
+}
+
+.stelar-guide li + li {
+  margin-top: 0.35rem;
+}
+
 .capture-targets {
   display: grid;
   gap: 0.75rem;
+}
+
+.capture-card-primary {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+}
+
+.live-session {
+  margin-top: 1rem;
+  padding: 0.9rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--paper-elevated);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.live-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.live-video {
+  width: 100%;
+  max-height: 42vh;
+  border-radius: 12px;
+  background: #05070a;
+  object-fit: contain;
+}
+
+.live-tip {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
 }
 
 .capture-card {
