@@ -1,4 +1,4 @@
-const CACHE = "readglass-v2";
+const CACHE = "readglass-v3";
 const ASSETS = [
   "./",
   "./index.html",

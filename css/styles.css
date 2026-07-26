@@ -73,6 +73,10 @@ button {
   cursor: pointer;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .app {
   width: min(720px, 100%);
   margin: 0 auto;
@@ -272,6 +276,11 @@ button {
 .empty {
   color: var(--ink-muted);
   line-height: 1.5;
+}
+
+.capture-hint {
+  margin: -0.25rem 0 1rem;
+  line-height: 1.45;
 }
 
 .capture-targets {

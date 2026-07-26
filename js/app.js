@@ -45,7 +45,9 @@ const els = {
   libraryEmpty: document.getElementById("libraryEmpty"),
   bookCount: document.getElementById("bookCount"),
   captureTitle: document.getElementById("captureTitle"),
+  captureHint: document.getElementById("captureHint"),
   screenCaptureBtn: document.getElementById("screenCaptureBtn"),
+  pasteCaptureBtn: document.getElementById("pasteCaptureBtn"),
   cameraInput: document.getElementById("cameraInput"),
   fileInput: document.getElementById("fileInput"),
   previewWrap: document.getElementById("previewWrap"),
@@ -280,9 +282,38 @@ function resetCaptureUi() {
   els.previewImage.removeAttribute("src");
 }
 
+function supportsScreenCapture() {
+  return Boolean(navigator.mediaDevices?.getDisplayMedia);
+}
+
+function configureCaptureOptions() {
+  const canScreen = supportsScreenCapture();
+  els.screenCaptureBtn.hidden = !canScreen;
+  if (els.captureHint) {
+    els.captureHint.textContent = canScreen
+      ? "Desktop: use Screen to share a tab. Phone: use Camera, Screenshot, or Paste."
+      : "On iPhone: screenshot the ebook page, then tap Screenshot or Paste below.";
+  }
+}
+
+async function pasteImageFromClipboard() {
+  if (!navigator.clipboard?.read) {
+    throw new Error("Clipboard paste isn’t available here. Use Screenshot or Camera instead.");
+  }
+  const items = await navigator.clipboard.read();
+  for (const item of items) {
+    const type = item.types.find((t) => t.startsWith("image/"));
+    if (!type) continue;
+    const blob = await item.getType(type);
+    return blob;
+  }
+  throw new Error("No image on the clipboard. Screenshot a page, copy it, then try Paste again.");
+}
+
 function openCapture(bookId, title) {
   state.captureBookId = bookId;
   els.captureTitle.textContent = title ? `Capture · ${title}` : "Capture page";
+  configureCaptureOptions();
   resetCaptureUi();
   showView("capture");
 }
@@ -413,6 +444,33 @@ function wireEvents() {
     }
   });
 
+  els.pasteCaptureBtn.addEventListener("click", async () => {
+    try {
+      const blob = await pasteImageFromClipboard();
+      await runOcr(blob);
+    } catch (error) {
+      if (error?.name === "NotAllowedError") {
+        alert("Allow clipboard access, or use Screenshot / Camera instead.");
+        return;
+      }
+      alert(error.message || "Paste failed.");
+    }
+  });
+
+  // iOS-friendly: paste image with Cmd/Ctrl+V while on capture view
+  window.addEventListener("paste", async (event) => {
+    if (state.view !== "capture") return;
+    const items = event.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (!item.type.startsWith("image/")) continue;
+      event.preventDefault();
+      const file = item.getAsFile();
+      if (file) await runOcr(file);
+      return;
+    }
+  });
+
   els.cameraInput.addEventListener("change", async () => {
     const file = els.cameraInput.files?.[0];
     els.cameraInput.value = "";
@@ -520,6 +578,7 @@ async function registerServiceWorker() {
 applyTheme();
 applyFont();
 updateListenUi();
+configureCaptureOptions();
 wireEvents();
 refreshLibrary();
 registerServiceWorker();

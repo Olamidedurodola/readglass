@@ -76,11 +76,10 @@
           <div class="section-head">
             <h2 id="captureTitle">Capture page</h2>
           </div>
+          <p class="capture-hint muted" id="captureHint">
+            On iPhone: screenshot the ebook page, then tap Screenshot or Paste below.
+          </p>
           <div class="capture-targets">
-            <button class="capture-card" id="screenCaptureBtn" type="button">
-              <strong>Screen</strong>
-              <span>Share a window or tab (desktop)</span>
-            </button>
             <label class="capture-card" for="cameraInput">
               <strong>Camera</strong>
               <span>Snap the page on your phone</span>
@@ -88,9 +87,17 @@
             </label>
             <label class="capture-card" for="fileInput">
               <strong>Screenshot</strong>
-              <span>Upload an image from your device</span>
+              <span>Choose a photo or screenshot</span>
               <input id="fileInput" type="file" accept="image/*" hidden />
             </label>
+            <button class="capture-card" id="pasteCaptureBtn" type="button">
+              <strong>Paste</strong>
+              <span>Paste an image from your clipboard</span>
+            </button>
+            <button class="capture-card" id="screenCaptureBtn" type="button" hidden>
+              <strong>Screen</strong>
+              <span>Share a window or tab (desktop)</span>
+            </button>
           </div>
 
           <div class="preview-wrap" id="previewWrap" hidden>
