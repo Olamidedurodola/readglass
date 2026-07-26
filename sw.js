@@ -1,4 +1,4 @@
-const CACHE = "readglass-v1";
+const CACHE = "readglass-v2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const ASSETS = [
   "./js/app.js",
   "./js/db.js",
   "./js/ocr.js",
+  "./js/speech.js",
   "./manifest.webmanifest",
   "./icons/icon.svg",
   "./icons/icon-192.png",

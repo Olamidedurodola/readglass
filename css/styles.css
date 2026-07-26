@@ -485,18 +485,38 @@ textarea {
   transform: translateX(-50%);
   width: min(680px, calc(100% - 1.5rem));
   padding: 0.55rem;
-  border-radius: 999px;
+  border-radius: 22px;
   border: 1px solid var(--line);
   background: color-mix(in srgb, var(--paper-elevated) 88%, transparent);
   backdrop-filter: blur(16px);
   justify-content: space-between;
   align-items: center;
+  gap: 0.4rem;
   box-shadow: var(--shadow);
 }
 
-.font-controls {
+.font-controls,
+.listen-controls {
   display: flex;
   gap: 0.35rem;
+  align-items: center;
+}
+
+.listen-controls .btn-primary {
+  min-width: 5.5rem;
+  padding: 0.65rem 0.9rem;
+}
+
+@media (max-width: 520px) {
+  .reader-controls {
+    border-radius: 18px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .reader-controls .btn-ghost {
+    order: 3;
+  }
 }
 
 .modal {

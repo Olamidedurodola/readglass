@@ -9,6 +9,7 @@ import {
   updatePage,
 } from "./db.js";
 import { captureScreenFrame, recognizeImage } from "./ocr.js";
+import { createNarrator } from "./speech.js";
 
 const THEMES = ["night", "paper", "sepia"];
 const FONT_MIN = 1;
@@ -26,6 +27,7 @@ const state = {
   deferredInstall: null,
   fontSize: Number(localStorage.getItem("rg-font") || 1.2),
   theme: localStorage.getItem("rg-theme") || "night",
+  autoListen: false,
 };
 
 const els = {
@@ -67,10 +69,76 @@ const els = {
   nextPageBtn: document.getElementById("nextPageBtn"),
   fontDownBtn: document.getElementById("fontDownBtn"),
   fontUpBtn: document.getElementById("fontUpBtn"),
+  listenBtn: document.getElementById("listenBtn"),
+  speechStopBtn: document.getElementById("speechStopBtn"),
+  speechSlowerBtn: document.getElementById("speechSlowerBtn"),
+  speechFasterBtn: document.getElementById("speechFasterBtn"),
   newBookModal: document.getElementById("newBookModal"),
   newBookForm: document.getElementById("newBookForm"),
   newBookTitle: document.getElementById("newBookTitle"),
 };
+
+const narrator = createNarrator({
+  onEnd: () => {
+    if (!state.autoListen) return;
+    if (state.readerIndex >= state.pages.length - 1) {
+      state.autoListen = false;
+      updateListenUi();
+      return;
+    }
+    state.readerIndex += 1;
+    renderReader({ keepListening: true });
+    try {
+      narrator.speak(state.pages[state.readerIndex]?.text || "");
+    } catch {
+      state.autoListen = false;
+      updateListenUi();
+    }
+  },
+  onStateChange: updateListenUi,
+});
+
+function updateListenUi(status = {}) {
+  const supported = status.supported ?? narrator.isSupported();
+  const playing = status.playing ?? narrator.isPlaying();
+  const paused = status.paused ?? narrator.isPaused();
+  const rate = status.rate ?? narrator.getRate();
+
+  if (!supported) {
+    els.listenBtn.disabled = true;
+    els.listenBtn.textContent = "No TTS";
+    els.speechStopBtn.hidden = true;
+    els.speechSlowerBtn.disabled = true;
+    els.speechFasterBtn.disabled = true;
+    return;
+  }
+
+  els.speechSlowerBtn.disabled = false;
+  els.speechFasterBtn.disabled = false;
+  els.speechStopBtn.hidden = !(playing || paused);
+  els.speechSlowerBtn.title = `Slower (${rate.toFixed(1)}x)`;
+  els.speechFasterBtn.title = `Faster (${rate.toFixed(1)}x)`;
+
+  if (paused) els.listenBtn.textContent = "Resume";
+  else if (playing) els.listenBtn.textContent = "Pause";
+  else els.listenBtn.textContent = "Listen";
+}
+
+function stopListening() {
+  state.autoListen = false;
+  narrator.stop();
+}
+
+function startListening() {
+  try {
+    state.autoListen = true;
+    narrator.speak(state.pages[state.readerIndex]?.text || "");
+  } catch (error) {
+    state.autoListen = false;
+    updateListenUi();
+    alert(error.message || "Could not start narration.");
+  }
+}
 
 function applyTheme() {
   if (state.theme === "night") document.documentElement.removeAttribute("data-theme");
@@ -84,6 +152,7 @@ function applyFont() {
 }
 
 function showView(view) {
+  if (view !== "reader") stopListening();
   state.view = view;
   els.libraryView.hidden = view !== "library";
   els.captureView.hidden = view !== "capture";
@@ -190,12 +259,14 @@ async function openReader(bookId, index = 0) {
   showView("reader");
 }
 
-function renderReader() {
+function renderReader({ keepListening = false } = {}) {
+  if (!keepListening) stopListening();
   const page = state.pages[state.readerIndex];
   els.readerProgress.textContent = `Page ${state.readerIndex + 1} of ${state.pages.length}`;
   els.readerText.textContent = page?.text || "";
   els.prevPageBtn.disabled = state.readerIndex <= 0;
   els.nextPageBtn.disabled = state.readerIndex >= state.pages.length - 1;
+  updateListenUi();
 }
 
 function resetCaptureUi() {
@@ -377,14 +448,18 @@ function wireEvents() {
 
   els.prevPageBtn.addEventListener("click", () => {
     if (state.readerIndex <= 0) return;
+    const wasListening = narrator.isPlaying() || narrator.isPaused() || state.autoListen;
     state.readerIndex -= 1;
     renderReader();
+    if (wasListening) startListening();
   });
 
   els.nextPageBtn.addEventListener("click", () => {
     if (state.readerIndex >= state.pages.length - 1) return;
+    const wasListening = narrator.isPlaying() || narrator.isPaused() || state.autoListen;
     state.readerIndex += 1;
     renderReader();
+    if (wasListening) startListening();
   });
 
   els.fontDownBtn.addEventListener("click", () => {
@@ -396,6 +471,27 @@ function wireEvents() {
     state.fontSize = Math.min(FONT_MAX, Number((state.fontSize + FONT_STEP).toFixed(1)));
     applyFont();
   });
+
+  els.listenBtn.addEventListener("click", () => {
+    if (!narrator.isSupported()) {
+      alert("Text-to-speech is not available in this browser.");
+      return;
+    }
+    if (narrator.isPaused()) {
+      state.autoListen = true;
+      narrator.resume();
+      return;
+    }
+    if (narrator.isPlaying()) {
+      narrator.pause();
+      return;
+    }
+    startListening();
+  });
+
+  els.speechStopBtn.addEventListener("click", () => stopListening());
+  els.speechSlowerBtn.addEventListener("click", () => narrator.slower());
+  els.speechFasterBtn.addEventListener("click", () => narrator.faster());
 
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
@@ -423,6 +519,7 @@ async function registerServiceWorker() {
 
 applyTheme();
 applyFont();
+updateListenUi();
 wireEvents();
 refreshLibrary();
 registerServiceWorker();

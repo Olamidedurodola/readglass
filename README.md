@@ -8,6 +8,7 @@ Personal PWA that turns screen captures and photos into readable text pages. Eve
 - On-device OCR with [Tesseract.js](https://tesseract.projectnaptha.com/)
 - Library of books/pages stored in IndexedDB
 - Clean reader with font size + night / paper / sepia themes
+- **Listen** mode (browser text-to-speech) with speed control and auto-advance
 - Installable as a Progressive Web App
 
 ## Use it
