@@ -96,39 +96,53 @@ export class ScreenSession {
     return this.video;
   }
 
-  async snap() {
+  async snap({ settleMs = 500, crop = true } = {}) {
     if (!this.active || !this.video) {
-      throw new Error("Screen share ended. Start Live screen again and pick the Selar Chrome tab.");
+      throw new Error("Screen share ended. Start again and pick the Selar Chrome tab (not ReadGlass).");
     }
 
-    await new Promise((r) => setTimeout(r, 120));
+    await new Promise((r) => setTimeout(r, settleMs));
 
     const width = this.video.videoWidth || 1280;
     const height = this.video.videoHeight || 720;
     if (width < 2 || height < 2) {
-      throw new Error("Could not read the shared screen. Try sharing the Selar Chrome tab again.");
+      throw new Error("Could not read the shared screen. Share the Selar tab only.");
     }
 
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(this.video, 0, 0, width, height);
+    const full = document.createElement("canvas");
+    full.width = width;
+    full.height = height;
+    const fullCtx = full.getContext("2d");
+    fullCtx.drawImage(this.video, 0, 0, width, height);
 
-    // Black frame usually means the site blocked capture — fall back to OS screenshot.
-    const sample = ctx.getImageData(0, 0, Math.min(40, width), Math.min(40, height)).data;
+    const sx = Math.floor(width * 0.4);
+    const sy = Math.floor(height * 0.4);
+    const sample = fullCtx.getImageData(sx, sy, Math.min(40, width - sx), Math.min(40, height - sy)).data;
     let lit = 0;
     for (let i = 0; i < sample.length; i += 4) {
       if (sample[i] + sample[i + 1] + sample[i + 2] > 30) lit += 1;
     }
     if (lit < 3) {
       throw new Error(
-        "That tab looks blank (capture blocked). Open Selar in Chrome and use an OS screenshot instead."
+        "That share looks blank. Share the Selar Chrome tab (Chrome → Tab → Selar), not the whole desktop."
       );
     }
 
+    let out = full;
+    if (crop) {
+      const x = Math.floor(width * 0.08);
+      const y = Math.floor(height * 0.06);
+      const w = Math.floor(width * 0.84);
+      const h = Math.floor(height * 0.78);
+      const cropped = document.createElement("canvas");
+      cropped.width = w;
+      cropped.height = h;
+      cropped.getContext("2d").drawImage(full, x, y, w, h, 0, 0, w, h);
+      out = cropped;
+    }
+
     return await new Promise((resolve, reject) => {
-      canvas.toBlob(
+      out.toBlob(
         (blob) => {
           if (!blob) reject(new Error("Could not capture frame."));
           else resolve(blob);

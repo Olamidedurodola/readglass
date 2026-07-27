@@ -33,6 +33,7 @@ const state = {
   autoWaiting: false,
   autoAbort: null,
   autoContinue: null,
+  autoResnap: null,
   autoPageCount: 0,
 };
 
@@ -60,10 +61,14 @@ const els = {
   bookCount: document.getElementById("bookCount"),
   autoListenStatus: document.getElementById("autoListenStatus"),
   autoListenVideo: document.getElementById("autoListenVideo"),
+  autoListenPreview: document.getElementById("autoListenPreview"),
   autoSavePages: document.getElementById("autoSavePages"),
   startAutoListenBtn: document.getElementById("startAutoListenBtn"),
+  autoResnapBtn: document.getElementById("autoResnapBtn"),
   autoNextPageBtn: document.getElementById("autoNextPageBtn"),
   stopAutoListenBtn: document.getElementById("stopAutoListenBtn"),
+  copySelarHelperBtn: document.getElementById("copySelarHelperBtn"),
+  selarHelperCopyStatus: document.getElementById("selarHelperCopyStatus"),
   captureTitle: document.getElementById("captureTitle"),
   captureHint: document.getElementById("captureHint"),
   captureTargets: document.getElementById("captureTargets"),
@@ -221,15 +226,26 @@ function stopAutoListenSession() {
     state.autoContinue();
     state.autoContinue = null;
   }
+  state.autoResnap = null;
   speechSynthesis?.cancel?.();
   screenSession.stop();
   if (els.autoListenVideo) {
     els.autoListenVideo.srcObject = null;
     els.autoListenVideo.hidden = true;
   }
+  if (els.autoListenPreview) {
+    els.autoListenPreview.removeAttribute("src");
+    els.autoListenPreview.hidden = true;
+  }
   if (els.startAutoListenBtn) els.startAutoListenBtn.hidden = false;
   if (els.autoNextPageBtn) els.autoNextPageBtn.hidden = true;
+  if (els.autoResnapBtn) els.autoResnapBtn.hidden = true;
   if (els.stopAutoListenBtn) els.stopAutoListenBtn.hidden = true;
+}
+
+function getSelarHelperLauncher() {
+  const url = new URL("./js/selar-helper.js", window.location.href).href;
+  return `(()=>{const s=document.createElement('script');s.src='${url}?t='+Date.now();document.documentElement.appendChild(s);})();`;
 }
 
 function waitForNextPageAction() {
@@ -238,16 +254,39 @@ function waitForNextPageAction() {
     state.autoContinue = () => {
       state.autoWaiting = false;
       state.autoContinue = null;
-      resolve();
+      resolve("next");
+    };
+    state.autoResnap = () => {
+      state.autoWaiting = false;
+      state.autoContinue = null;
+      state.autoResnap = null;
+      resolve("resnap");
     };
     els.autoNextPageBtn.hidden = false;
+    els.autoResnapBtn.hidden = false;
     els.autoNextPageBtn.focus();
   });
 }
 
+async function captureAndRecognize(n) {
+  setAutoStatus(`Page ${n}: capturing what’s on Selar…`);
+  const blob = await screenSession.snap({ settleMs: 700, crop: true });
+  if (els.autoListenPreview) {
+    if (state.pendingImageUrl) URL.revokeObjectURL(state.pendingImageUrl);
+    state.pendingImageUrl = URL.createObjectURL(blob);
+    els.autoListenPreview.src = state.pendingImageUrl;
+    els.autoListenPreview.hidden = false;
+  }
+  setAutoStatus(`Page ${n}: reading text from that preview…`);
+  const text = await recognizeImage(blob, (progress) => {
+    setAutoStatus(`Page ${n}: reading text… ${Math.round(progress * 100)}%`);
+  });
+  return text;
+}
+
 async function runAutoListenSession() {
   if (!supportsScreenCapture()) {
-    alert("Auto Listen only works on a computer with Chrome.");
+    alert("Screen-share Auto Listen only works on a computer with Chrome.");
     return;
   }
 
@@ -259,12 +298,14 @@ async function runAutoListenSession() {
   els.startAutoListenBtn.hidden = true;
   els.stopAutoListenBtn.hidden = false;
   els.autoNextPageBtn.hidden = true;
-  setAutoStatus("Choose the Selar Chrome tab to share…");
+  els.autoResnapBtn.hidden = true;
+  setAutoStatus("Choose the Selar Chrome TAB (not whole screen, not ReadGlass)…");
 
   try {
     const video = await screenSession.start();
     els.autoListenVideo.hidden = false;
     els.autoListenVideo.srcObject = video.srcObject;
+    await new Promise((r) => setTimeout(r, 800));
   } catch (error) {
     stopAutoListenSession();
     if (error?.name === "NotAllowedError") {
@@ -286,40 +327,43 @@ async function runAutoListenSession() {
   while (state.autoSession && screenSession.active) {
     state.autoPageCount += 1;
     const n = state.autoPageCount;
-    setAutoStatus(`Page ${n}: reading text from screen…`);
     els.autoNextPageBtn.hidden = true;
+    els.autoResnapBtn.hidden = true;
 
     let text = "";
     try {
-      const blob = await screenSession.snap();
-      text = await recognizeImage(blob, (progress) => {
-        setAutoStatus(`Page ${n}: reading text… ${Math.round(progress * 100)}%`);
-      });
+      text = await captureAndRecognize(n);
     } catch (error) {
       if (!state.autoSession) break;
       setAutoStatus(error.message || "Could not read this page.");
-      alert(`${error.message || "Could not read this page."}\n\nFlip to a text page on Selar, then tap Next page.`);
-      await waitForNextPageAction();
+      const action = await waitForNextPageAction();
+      if (action === "resnap") {
+        state.autoPageCount -= 1;
+      }
       continue;
     }
 
     if (!state.autoSession) break;
 
     if (!text) {
-      setAutoStatus(`Page ${n}: no text found (cover/image?). Flip to a text page, then Next page.`);
-      await waitForNextPageAction();
+      setAutoStatus(`Page ${n}: no text in preview. Resnap or flip to a text page.`);
+      const action = await waitForNextPageAction();
+      if (action === "resnap") state.autoPageCount -= 1;
       continue;
     }
+
+    // Show a short excerpt so user can verify it's the right page.
+    const excerpt = text.slice(0, 90).replace(/\s+/g, " ");
+    setAutoStatus(`Page ${n} looks like: “${excerpt}…” — listening now`);
 
     if (bookId) {
       try {
         await addPage(bookId, text);
       } catch {
-        /* keep listening even if save fails */
+        /* keep listening */
       }
     }
 
-    setAutoStatus(`Page ${n}: listening…`);
     const result = await speakUntilDone(text, {
       rate: narrator.getRate(),
       signal: state.autoAbort.signal,
@@ -327,9 +371,12 @@ async function runAutoListenSession() {
     if (!state.autoSession || result?.aborted) break;
 
     setAutoStatus(
-      `Page ${n} done. Click > on Selar to turn the page, then tap Next page here (or press Space).`
+      `Page ${n} done. Click > on Selar, then Next page (or Space). Wrong page? Resnap.`
     );
-    await waitForNextPageAction();
+    const action = await waitForNextPageAction();
+    if (action === "resnap") {
+      state.autoPageCount -= 1;
+    }
   }
 
   const finishedPages = state.autoPageCount;
@@ -339,9 +386,7 @@ async function runAutoListenSession() {
       ? `Stopped after ${finishedPages} page${finishedPages === 1 ? "" : "s"}.`
       : "Ready when you are."
   );
-  if (bookId) {
-    await refreshLibrary();
-  }
+  if (bookId) await refreshLibrary();
 }
 
 function formatDate(ts) {
@@ -676,9 +721,28 @@ function wireEvents() {
     if (state.autoContinue) state.autoContinue();
   });
 
+  els.autoResnapBtn?.addEventListener("click", () => {
+    if (state.autoResnap) state.autoResnap();
+    else if (state.autoContinue) state.autoContinue();
+  });
+
   els.stopAutoListenBtn?.addEventListener("click", () => {
     stopAutoListenSession();
     setAutoStatus("Stopped. Tap Start Auto Listen to begin again.");
+  });
+
+  els.copySelarHelperBtn?.addEventListener("click", async () => {
+    const line = getSelarHelperLauncher();
+    try {
+      await navigator.clipboard.writeText(line);
+      els.selarHelperCopyStatus.hidden = false;
+      els.selarHelperCopyStatus.textContent =
+        "Copied. On the Selar book tab: F12 → Console → paste → Enter. Then tap Start.";
+    } catch {
+      els.selarHelperCopyStatus.hidden = false;
+      els.selarHelperCopyStatus.textContent = "Could not copy. Select and copy this line manually:";
+      prompt("Copy this helper line:", line);
+    }
   });
 
   window.addEventListener("keydown", (event) => {

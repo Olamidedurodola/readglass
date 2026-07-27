@@ -1,4 +1,4 @@
-const CACHE = "readglass-v7";
+const CACHE = "readglass-v8";
 const ASSETS = [
   "./",
   "./index.html",
@@ -8,6 +8,7 @@ const ASSETS = [
   "./js/ocr.js",
   "./js/speech.js",
   "./js/speak.js",
+  "./js/selar-helper.js",
   "./manifest.webmanifest",
   "./icons/icon.svg",
   "./icons/icon-192.png",

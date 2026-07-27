@@ -81,50 +81,58 @@
           </div>
 
           <aside class="stelar-guide">
-            <strong>This is for Selar books like yours</strong>
+            <strong>Important about Selar</strong>
             <p class="guide-note">
-              Selar shows pages as <em>pictures</em> (your book is ~1400+ pages). A bookmark cannot read that.
-              Do <strong>not</strong> paste any code into Google.
-            </p>
-            <p class="guide-note">
-              You need a <strong>computer with Chrome</strong>. Phones cannot auto-listen through a whole Selar flipbook.
+              Selar pages are pictures. ReadGlass cannot click “next” inside Selar from another tab.
+              For <strong>auto flip</strong>, run the helper <em>on the Selar page</em> (steps below).
             </p>
           </aside>
 
           <div class="listen-setup-card">
-            <h3>How to start (computer)</h3>
+            <h3>Best: Auto read + auto flip (on Selar)</h3>
             <ol class="plain-steps">
-              <li>On your computer, open your book in Chrome: <em>selar.com</em> (browser, not the app).</li>
-              <li>Keep that Selar tab open.</li>
-              <li>In this ReadGlass tab, tap <strong>Start Auto Listen</strong> below.</li>
-              <li>When Chrome asks what to share, pick the <strong>Selar</strong> tab (not ReadGlass).</li>
-              <li>ReadGlass will read the page aloud. When it finishes, click <strong>&gt;</strong> on Selar to turn the page, then tap <strong>Next page</strong> here (or press Space).</li>
-              <li>Repeat until you’re done — or tap Stop.</li>
+              <li>Open your book on <em>selar.com</em> in Chrome.</li>
+              <li>Go to the page you want to start from.</li>
+              <li>Press <strong>F12</strong> (or Ctrl+Shift+J) → open the <strong>Console</strong> tab.</li>
+              <li>Tap <strong>Copy helper line</strong> below, paste into the Console, press Enter.</li>
+              <li>On the green panel, tap <strong>Start</strong>. It reads the page on screen, then flips automatically.</li>
             </ol>
+            <div class="editor-actions">
+              <button class="btn btn-primary" id="copySelarHelperBtn" type="button">Copy helper line</button>
+            </div>
+            <p class="muted" id="selarHelperCopyStatus" hidden></p>
+            <p class="muted capture-hint">
+              Paste only into the Selar Console — never into Google or the address bar.
+            </p>
           </div>
 
           <div class="listen-setup-card" id="autoListenPanel">
-            <h3>Controls</h3>
+            <h3>Or: Screen share (manual flip)</h3>
+            <ol class="plain-steps">
+              <li>Open Selar on the page you want.</li>
+              <li>Tap <strong>Start Auto Listen</strong>, share the <strong>Selar tab</strong>.</li>
+              <li>Check the preview — it should match what you see on Selar.</li>
+              <li>After each page, click <strong>&gt;</strong> on Selar, then <strong>Next page</strong> here.</li>
+            </ol>
             <p class="muted" id="autoListenStatus">Ready when you are.</p>
             <video id="autoListenVideo" class="live-video" muted playsinline autoplay hidden></video>
+            <img id="autoListenPreview" class="live-video" alt="What will be read" hidden />
             <label class="rg-check">
               <input type="checkbox" id="autoSavePages" />
               Also save each page’s text into your library
             </label>
             <div class="editor-actions">
               <button class="btn btn-primary" id="startAutoListenBtn" type="button">Start Auto Listen</button>
+              <button class="btn btn-ghost" id="autoResnapBtn" type="button" hidden>Resnap this page</button>
               <button class="btn btn-ghost" id="autoNextPageBtn" type="button" hidden>Next page</button>
               <button class="btn btn-ghost" id="stopAutoListenBtn" type="button" hidden>Stop</button>
             </div>
-            <p class="muted capture-hint" id="autoListenHint">
-              Tip: put Selar on one half of the screen and ReadGlass on the other.
-            </p>
           </div>
 
           <div class="listen-setup-card">
             <h3>On your phone?</h3>
             <p class="muted">
-              Auto Listen needs a computer. On phone you can only screenshot a few pages, or use your computer and leave it playing.
+              Auto flip needs a computer. Use a laptop/PC with Chrome for long books.
             </p>
           </div>
         </section>
