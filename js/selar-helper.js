@@ -10,6 +10,8 @@
   }
 
   const CDN = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+  const MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+    || window.matchMedia("(max-width: 768px)").matches;
   const state = {
     running: false,
     paused: false,
@@ -41,9 +43,10 @@
     Object.assign(panel.style, {
       position: "fixed",
       zIndex: "2147483647",
-      right: "12px",
-      left: "auto",
-      bottom: "12px",
+      right: MOBILE ? "auto" : "12px",
+      left: MOBILE ? "12px" : "auto",
+      bottom: MOBILE ? "auto" : "12px",
+      top: MOBILE ? "12px" : "auto",
       width: "min(320px, calc(100vw - 24px))",
       background: "#121820",
       color: "#e7ecf2",
@@ -51,9 +54,14 @@
       padding: "12px",
       font: "14px/1.4 system-ui,sans-serif",
       boxShadow: "0 18px 50px rgba(0,0,0,.45)",
+      maxHeight: MOBILE ? "42vh" : "none",
+      overflow: "auto",
     });
     panel.querySelectorAll("button").forEach((b) => {
-      if (b.dataset.go) return;
+      if (b.dataset.go) {
+        Object.assign(b.style, { minHeight: MOBILE ? "44px" : "", fontSize: MOBILE ? "15px" : "" });
+        return;
+      }
       Object.assign(b.style, {
         border: "1px solid rgba(255,255,255,.14)",
         background: "#1a222d",
@@ -251,10 +259,13 @@
   function currentPageNumbers() {
     const label = document.body.innerText.match(/(\d+)\s*\/\s*(\d+)/);
     if (!label) return null;
-    return {
-      left: Number(label[1]),
-      right: Number(label[2]),
-    };
+    const a = Number(label[1]);
+    const b = Number(label[2]);
+    // Mobile Selar: "705 / 1447" = current page / total pages
+    if (b > 300 || findVisiblePages().length === 1) {
+      return { current: a, total: b, single: true };
+    }
+    return { left: a, right: b, single: false };
   }
 
   async function ocrCanvas(canvas) {
@@ -320,9 +331,10 @@
     }
 
     // Heuristic: click right-side control in bottom toolbar area.
+    const toolbarBottom = MOBILE ? innerHeight - 180 : innerHeight - 120;
     const toolbarHits = candidates.filter((el) => {
       const r = el.getBoundingClientRect();
-      return r.width > 20 && r.width < 80 && r.height > 20 && r.height < 80 && r.bottom > innerHeight - 120 && r.left > innerWidth * 0.45;
+      return r.width > 20 && r.width < 100 && r.height > 20 && r.height < 100 && r.bottom > toolbarBottom && r.left > innerWidth * 0.35;
     });
     if (toolbarHits.length) {
       toolbarHits.sort((a, b) => b.getBoundingClientRect().left - a.getBoundingClientRect().left);
@@ -345,15 +357,25 @@
       if (pageFingerprint() !== prev) {
         const now = currentPageNumbers();
         if (prevNums && now) {
-          const jumpedLeft = now.left - prevNums.left;
-          const jumpedRight = now.right - prevNums.right;
-          if (jumpedLeft > 2 || jumpedRight > 2) {
-            status(
-              `Selar jumped too far (${prevNums.left}/${prevNums.right} -> ${now.left}/${now.right}). Stopping auto-flip.`
-            );
-            state.running = false;
-            speechSynthesis.cancel();
-            return false;
+          if (now.single || prevNums.single) {
+            const jumped = now.current - (prevNums.current ?? prevNums.left);
+            if (jumped > 2) {
+              status(`Selar jumped too far (page ${prevNums.current ?? prevNums.left} → ${now.current}). Stopping.`);
+              state.running = false;
+              speechSynthesis.cancel();
+              return false;
+            }
+          } else {
+            const jumpedLeft = now.left - prevNums.left;
+            const jumpedRight = now.right - prevNums.right;
+            if (jumpedLeft > 2 || jumpedRight > 2) {
+              status(
+                `Selar jumped too far (${prevNums.left}/${prevNums.right} -> ${now.left}/${now.right}). Stopping auto-flip.`
+              );
+              state.running = false;
+              speechSynthesis.cancel();
+              return false;
+            }
           }
         }
         await sleep(500);
@@ -482,5 +504,5 @@
 
   window.__rgSelarHelper = { stop, start, get running() { return state.running; } };
   ui();
-  status("Tap Start — reads left page fully, then right, then flips.");
+  status(MOBILE ? "Tap Start — reads this page, then auto-flips." : "Tap Start — reads left page fully, then right, then flips.");
 })();

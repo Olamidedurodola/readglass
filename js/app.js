@@ -11,6 +11,7 @@ import {
 import { ScreenSession, recognizeImage, supportsScreenCapture } from "./ocr.js";
 import { createNarrator } from "./speech.js";
 import { speakUntilDone } from "./speak.js";
+import { isAndroid, isMobile } from "./platform.js";
 
 const THEMES = ["night", "paper", "sepia"];
 const FONT_MIN = 1;
@@ -69,6 +70,12 @@ const els = {
   stopAutoListenBtn: document.getElementById("stopAutoListenBtn"),
   copySelarHelperBtn: document.getElementById("copySelarHelperBtn"),
   selarHelperCopyStatus: document.getElementById("selarHelperCopyStatus"),
+  androidSetupCard: document.getElementById("androidSetupCard"),
+  desktopSetupCard: document.getElementById("desktopSetupCard"),
+  iosNoteCard: document.getElementById("iosNoteCard"),
+  copyAndroidBookmarkBtn: document.getElementById("copyAndroidBookmarkBtn"),
+  androidBookmarkStatus: document.getElementById("androidBookmarkStatus"),
+  autoListenPanel: document.getElementById("autoListenPanel"),
   captureTitle: document.getElementById("captureTitle"),
   captureHint: document.getElementById("captureHint"),
   captureTargets: document.getElementById("captureTargets"),
@@ -200,13 +207,12 @@ function showView(view) {
 }
 
 function openListenSetup() {
-  if (!supportsScreenCapture()) {
-    els.autoListenStatus.textContent =
-      "Auto Listen needs a computer with Chrome. Open ReadGlass on your laptop/PC.";
-    els.startAutoListenBtn.disabled = true;
+  configureListenSetupForPlatform();
+  if (!supportsScreenCapture() || isMobile()) {
+    if (els.startAutoListenBtn) els.startAutoListenBtn.disabled = true;
   } else {
     els.startAutoListenBtn.disabled = false;
-    els.autoListenStatus.textContent = "Ready when you are.";
+    if (els.autoListenStatus) els.autoListenStatus.textContent = "Ready when you are.";
   }
   showView("listenSetup");
 }
@@ -246,6 +252,24 @@ function stopAutoListenSession() {
 function getSelarHelperLauncher() {
   const url = new URL("./js/selar-helper.js", window.location.href).href;
   return `(()=>{const s=document.createElement('script');s.src='${url}?t='+Date.now();document.documentElement.appendChild(s);})();`;
+}
+
+function getSelarAndroidBookmark() {
+  return `javascript:${encodeURIComponent(getSelarHelperLauncher())}`;
+}
+
+function configureListenSetupForPlatform() {
+  const android = isAndroid();
+  const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if (els.androidSetupCard) els.androidSetupCard.hidden = !android;
+  if (els.desktopSetupCard) els.desktopSetupCard.hidden = android;
+  if (els.iosNoteCard) els.iosNoteCard.hidden = !ios || android;
+  if (els.autoListenPanel) els.autoListenPanel.hidden = isMobile();
+
+  if (android && els.autoListenStatus) {
+    els.autoListenStatus.textContent = "Use the Android bookmark on your Selar book page.";
+  }
 }
 
 function waitForNextPageAction() {
@@ -745,6 +769,19 @@ function wireEvents() {
     }
   });
 
+  els.copyAndroidBookmarkBtn?.addEventListener("click", async () => {
+    const line = getSelarAndroidBookmark();
+    try {
+      await navigator.clipboard.writeText(line);
+      els.androidBookmarkStatus.hidden = false;
+      els.androidBookmarkStatus.textContent =
+        "Copied. Create a bookmark on Selar and paste this into the bookmark URL field.";
+    } catch {
+      els.androidBookmarkStatus.hidden = false;
+      prompt("Paste this as your bookmark URL on Selar:", line);
+    }
+  });
+
   window.addEventListener("keydown", (event) => {
     if (state.view !== "listenSetup" || !state.autoWaiting) return;
     if (event.code === "Space" || event.code === "Enter") {
@@ -959,8 +996,9 @@ async function registerServiceWorker() {
 applyTheme();
 applyFont();
 updateListenUi();
-configureCaptureOptions();
+configureListenSetupForPlatform();
 wireEvents();
 refreshLibrary();
 registerServiceWorker();
-showView("library");
+if (location.hash === "#listen") openListenSetup();
+else showView("library");

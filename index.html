@@ -7,7 +7,8 @@
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <meta name="theme-color" content="#0f1419" />
-    <meta name="description" content="Capture a page, extract the text, read it anywhere." />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="description" content="Listen to Selar books page by page on Android and desktop." />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="ReadGlass" />
@@ -83,13 +84,30 @@
           <aside class="stelar-guide">
             <strong>Important about Selar</strong>
             <p class="guide-note">
-              Selar pages are pictures. ReadGlass cannot click “next” inside Selar from another tab.
-              For <strong>auto flip</strong>, run the helper <em>on the Selar page</em> (steps below).
+              Selar pages are pictures. The reader pane must run <em>on the Selar page</em> — not inside ReadGlass alone.
             </p>
           </aside>
 
-          <div class="listen-setup-card">
-            <h3>Best: Auto read + auto flip (on Selar)</h3>
+          <div class="listen-setup-card" id="androidSetupCard" hidden>
+            <h3>Android (Chrome)</h3>
+            <ol class="plain-steps">
+              <li>Install ReadGlass: Chrome menu → <strong>Add to Home screen</strong>.</li>
+              <li>Open your book on <em>selar.com</em> in Chrome (not the Selar app).</li>
+              <li>Tap <strong>Copy Android bookmark</strong> below.</li>
+              <li>Create a bookmark on Selar: ⋮ → <strong>Bookmarks</strong> → edit/add → paste into the <strong>URL</strong> field → save as <em>ReadGlass</em>.</li>
+              <li>On your book page, open that bookmark → tap <strong>Start</strong> on the green panel.</li>
+            </ol>
+            <div class="editor-actions">
+              <button class="btn btn-primary" id="copyAndroidBookmarkBtn" type="button">Copy Android bookmark</button>
+            </div>
+            <p class="muted" id="androidBookmarkStatus" hidden></p>
+            <p class="muted capture-hint">
+              Selar shows one page at a time on phone — auto-flip moves one page forward each time.
+            </p>
+          </div>
+
+          <div class="listen-setup-card" id="desktopSetupCard">
+            <h3>Computer (Chrome)</h3>
             <ol class="plain-steps">
               <li>Open your book on <em>selar.com</em> in Chrome.</li>
               <li>Go to the page you want to start from.</li>
@@ -102,11 +120,11 @@
             </div>
             <p class="muted" id="selarHelperCopyStatus" hidden></p>
             <p class="muted capture-hint">
-              Paste into the Selar <strong>Console</strong> only — not the address bar, not Google, and not a bookmark URL.
+              Paste into the Selar <strong>Console</strong> only — not the address bar or Google.
             </p>
           </div>
 
-          <div class="listen-setup-card" id="autoListenPanel">
+          <div class="listen-setup-card" id="autoListenPanel" hidden>
             <h3>Or: Screen share (manual flip)</h3>
             <ol class="plain-steps">
               <li>Open Selar on the page you want.</li>
@@ -129,10 +147,10 @@
             </div>
           </div>
 
-          <div class="listen-setup-card">
-            <h3>On your phone?</h3>
+          <div class="listen-setup-card" id="iosNoteCard" hidden>
+            <h3>iPhone / iPad</h3>
             <p class="muted">
-              Auto flip needs a computer. Use a laptop/PC with Chrome for long books.
+              Auto Listen on Selar works best on Android Chrome. On iPhone, use screenshots for short sections.
             </p>
           </div>
         </section>

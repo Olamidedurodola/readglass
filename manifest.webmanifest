@@ -1,13 +1,15 @@
 {
   "name": "ReadGlass",
   "short_name": "ReadGlass",
-  "description": "Capture a page, extract the text, read it anywhere.",
+  "description": "Listen to Selar books page by page — Android and desktop.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "display_override": ["standalone", "browser"],
+  "orientation": "any",
   "background_color": "#0f1419",
   "theme_color": "#0f1419",
+  "categories": ["books", "education", "utilities"],
   "icons": [
     {
       "src": "./icons/icon.svg",
@@ -26,6 +28,15 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Auto Listen",
+      "short_name": "Listen",
+      "description": "Set up Selar auto listen",
+      "url": "./index.html#listen",
+      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }
