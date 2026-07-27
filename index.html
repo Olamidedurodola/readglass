@@ -89,26 +89,23 @@
           </aside>
 
           <div class="listen-setup-card" id="androidSetupCard" hidden>
-            <h3>Android (Chrome)</h3>
+            <h3>Android floating app (recommended)</h3>
             <p class="guide-note muted">
-              The green floating panel opens <strong>on your Selar book page</strong> after you tap the bookmark — not inside ReadGlass.
+              Like Tracker Voice: a green bubble stays on top of Chrome while you read Selar.
+              The website bookmark cannot float over other apps — install the Android app for that.
             </p>
             <ol class="plain-steps">
-              <li>Open your book on <em>selar.com</em> in Chrome (not the Selar app).</li>
-              <li>Tap the star / ⋮ → <strong>Bookmark</strong> this page.</li>
-              <li>Open Bookmarks → tap ⋮ on that bookmark → <strong>Edit</strong>.</li>
-              <li>Tap <strong>Copy Android bookmark</strong> below, then paste it into the bookmark’s <strong>URL</strong> field (replace the whole URL). Name it <em>ReadGlass</em>.</li>
-              <li>Go back to your book page → open the <em>ReadGlass</em> bookmark.</li>
-              <li>A green floating panel should appear → tap <strong>Start</strong>.</li>
+              <li>Install the <strong>ReadGlass</strong> Android app (APK from GitHub Releases).</li>
+              <li>Open ReadGlass → turn on <strong>Floating bubble</strong> → allow “Display over other apps”.</li>
+              <li>Open your book in Chrome (selar.com).</li>
+              <li>Tap <strong>Listen</strong> on the bubble → allow screen capture when asked.</li>
+              <li>Flip the page, tap Listen again.</li>
             </ol>
             <div class="editor-actions">
-              <button class="btn btn-primary" id="copyAndroidBookmarkBtn" type="button">Copy Android bookmark</button>
-              <button class="btn btn-ghost" id="previewAndroidPaneBtn" type="button">Preview green panel here</button>
+              <a class="btn btn-primary" id="androidApkLink" href="https://github.com/Olamidedurodola/readglass/releases" target="_blank" rel="noopener">Get Android app</a>
             </div>
-            <p class="muted" id="androidBookmarkStatus" hidden></p>
             <p class="muted capture-hint">
-              If Chrome opens Google search instead of the panel, the bookmark URL was not saved as <code>javascript:…</code> — edit it again and paste the full copied text.
-              Firefox for Android also works well with this bookmark.
+              Desktop Chrome is unchanged — still use <strong>Copy helper line</strong> → Console.
             </p>
           </div>
 

@@ -1,29 +1,33 @@
 # ReadGlass
 
-Personal PWA for listening to Selar books you already own.
+Personal reader for Selar books you already own.
 
-## Android (Chrome)
-
-1. Open https://olamidedurodola.github.io/readglass/
-2. Chrome menu → **Add to Home screen**
-3. **Auto Listen** → **Copy Android bookmark**
-4. On Selar, create a bookmark and paste the code into the bookmark **URL**
-5. Open your book on selar.com → tap the **ReadGlass** bookmark → **Start**
-
-Selar shows one page at a time on phone. Auto-flip advances one page each time.
-
-## Computer (Chrome)
+## Desktop (Chrome) — unchanged
 
 1. Open your book on selar.com
-2. ReadGlass → **Auto Listen** → **Copy helper line**
+2. Open https://olamidedurodola.github.io/readglass/ → **Auto Listen** → **Copy helper line**
 3. Selar tab: **F12 → Console** → paste → Enter → **Start**
 
-## Local preview
+## Android floating bubble (like Tracker Voice)
+
+A website **cannot** float over Chrome. Use the Android app:
+
+```bash
+cd mobile
+flutter pub get
+flutter build apk --release
+```
+
+Install `mobile/build/app/outputs/flutter-apk/app-release.apk` on your phone.
+
+1. Open **ReadGlass** → turn on **Floating bubble** → allow overlay permission
+2. Open Selar in Chrome
+3. Tap **Listen** on the green bubble
+4. Allow screen capture (first time)
+5. Flip page → tap Listen again
+
+## Local web preview
 
 ```bash
 npx --yes serve .
 ```
-
-## Deploy
-
-GitHub Pages from the `main` branch root.
