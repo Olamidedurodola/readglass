@@ -186,7 +186,6 @@
   function combineCanvases(canvases) {
     if (!canvases.length) return null;
     if (canvases.length === 1) return canvases[0];
-
     const gap = 8;
     const totalW = canvases.reduce((sum, c, i) => sum + c.width + (i ? gap : 0), 0);
     const maxH = Math.max(...canvases.map((c) => c.height));
@@ -203,12 +202,28 @@
     return combined;
   }
 
-  function grabPageCanvas() {
-    const pages = findVisiblePages();
-    if (!pages.length) return null;
+  function pageSideLabel(index, total) {
+    if (total === 1) return "page";
+    if (index === 0) return "left";
+    if (index === 1) return "right";
+    return `page ${index + 1}`;
+  }
 
-    const canvases = pages.map(elementToCanvas).filter(Boolean);
-    return combineCanvases(canvases);
+  async function ocrEachPage(pageEls, onProgress) {
+    const results = [];
+    for (let i = 0; i < pageEls.length; i += 1) {
+      const side = pageSideLabel(i, pageEls.length);
+      onProgress?.(`reading ${side} page…`, i, pageEls.length);
+      const canvas = elementToCanvas(pageEls[i]);
+      if (!canvas) continue;
+      try {
+        const text = await ocrCanvas(canvas);
+        if (text) results.push({ side, text });
+      } catch {
+        /* try next page */
+      }
+    }
+    return results;
   }
 
   function spreadCount() {
@@ -218,13 +233,19 @@
   function pageFingerprint() {
     const label = document.body.innerText.match(/(\d+)\s*\/\s*(\d+)/);
     if (label) return label[0];
-    const c = grabPageCanvas();
-    if (!c) return String(Date.now());
-    const ctx = c.getContext("2d");
-    const data = ctx.getImageData(0, 0, Math.min(32, c.width), Math.min(32, c.height)).data;
-    let hash = 0;
-    for (let i = 0; i < data.length; i += 16) hash = (hash * 31 + data[i]) | 0;
-    return `${c.width}x${c.height}:${hash}`;
+    const pages = findVisiblePages();
+    if (!pages.length) return String(Date.now());
+    return pages
+      .map((el) => {
+        const c = elementToCanvas(el);
+        if (!c) return "";
+        const ctx = c.getContext("2d");
+        const data = ctx.getImageData(0, 0, Math.min(16, c.width), Math.min(16, c.height)).data;
+        let hash = 0;
+        for (let i = 0; i < data.length; i += 16) hash = (hash * 31 + data[i]) | 0;
+        return hash;
+      })
+      .join("|");
   }
 
   async function ocrCanvas(canvas) {
@@ -342,36 +363,34 @@
 
       state.page += 1;
       const n = state.page;
-      const spread = spreadCount();
-      status(
-        spread > 1
-          ? `Spread ${n}: capturing ${spread} pages (left + right)…`
-          : `Page ${n}: capturing what’s on screen…`
-      );
-      await sleep(400);
+      const pageEls = findVisiblePages();
+      const spread = pageEls.length;
 
-      const canvas = grabPageCanvas();
-      if (!canvas) {
+      if (!pageEls.length) {
         status("No page image found. Open the book viewer, then Start again.");
         break;
       }
 
       status(
         spread > 1
-          ? `Spread ${n}: reading both pages…`
-          : `Page ${n}: reading text…`
+          ? `Spread ${n}: found ${spread} pages — left first, then right…`
+          : `Page ${n}: capturing…`
       );
-      let text = "";
+      await sleep(400);
+
+      let pageTexts = [];
       try {
-        text = await ocrCanvas(canvas);
+        pageTexts = await ocrEachPage(pageEls, (msg) => {
+          status(`Spread ${n}: ${msg}`);
+        });
       } catch (error) {
         status(error.message || "OCR failed");
         await sleep(800);
         continue;
       }
 
-      if (!text || text.length < 20) {
-        status(`Page ${n}: little/no text (cover?). Flipping…`);
+      if (!pageTexts.length) {
+        status(`Spread ${n}: little/no text (cover?). Flipping…`);
         if (autoFlipOn()) {
           const prev = pageFingerprint();
           flipNext();
@@ -381,11 +400,22 @@
         break;
       }
 
-      status(
-        spread > 1 ? `Spread ${n}: listening to both pages…` : `Page ${n}: listening…`
-      );
-      const spoken = await speak(text);
-      if (!state.running || spoken.aborted) break;
+      let aborted = false;
+      for (const { side, text } of pageTexts) {
+        if (!state.running) {
+          aborted = true;
+          break;
+        }
+        status(
+          spread > 1 ? `Spread ${n}: listening to ${side} page…` : `Page ${n}: listening…`
+        );
+        const spoken = await speak(text);
+        if (!state.running || spoken.aborted) {
+          aborted = true;
+          break;
+        }
+      }
+      if (aborted) break;
 
       if (!autoFlipOn()) {
         status(`Page ${n} done. Turn the page, then press Start.`);
@@ -426,5 +456,5 @@
 
   window.__rgSelarHelper = { stop, start, get running() { return state.running; } };
   ui();
-  status("Tap Start — reads left + right pages, then auto-flips.");
+  status("Tap Start — reads left page fully, then right, then flips.");
 })();
