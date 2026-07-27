@@ -7,11 +7,12 @@ Personal PWA for listening to Selar (and similar) books you already own.
 Selar flipbooks are page **images**, not copyable text. Screenshotting 1000+ pages is not practical.
 
 1. On a **computer with Chrome**, open your book on [selar.com](https://selar.com)
-2. Open ReadGlass → **Auto Listen** → **Start Auto Listen**
-3. Share the **Selar** Chrome tab
-4. When a page finishes, click **>** on Selar, then **Next page** in ReadGlass (or press Space)
+2. Open ReadGlass → **Auto Listen**
+3. Create the **Selar reader pane** bookmark once
+4. Open that bookmark while you are on the Selar book page
+5. Tap **Start** in the green panel
 
-Do **not** paste any bookmark/JavaScript code into Google.
+Fallback: use **Start Auto Listen** screen-share mode if needed.
 
 ## Screenshots (short sections only)
 

@@ -89,20 +89,21 @@
           </aside>
 
           <div class="listen-setup-card">
-            <h3>Best: Auto read + auto flip (on Selar)</h3>
+            <h3>Best: Auto read + auto flip (bookmark on Selar)</h3>
             <ol class="plain-steps">
               <li>Open your book on <em>selar.com</em> in Chrome.</li>
-              <li>Go to the page you want to start from.</li>
-              <li>Press <strong>F12</strong> (or Ctrl+Shift+J) → open the <strong>Console</strong> tab.</li>
-              <li>Tap <strong>Copy helper line</strong> below, paste into the Console, press Enter.</li>
-              <li>On the green panel, tap <strong>Start</strong>. It reads the page on screen, then flips automatically.</li>
+              <li>Create the bookmark below once.</li>
+              <li>Go to the page you want to start from in Selar.</li>
+              <li>Tap the bookmark on that Selar page.</li>
+              <li>On the green panel, tap <strong>Start</strong>. It reads the left page, then the right, then flips automatically.</li>
             </ol>
             <div class="editor-actions">
-              <button class="btn btn-primary" id="copySelarHelperBtn" type="button">Copy helper line</button>
+              <a class="btn btn-primary bookmarklet-link" id="selarBookmarkletLink" href="#">Selar reader pane</a>
+              <button class="btn btn-ghost" id="copySelarHelperBtn" type="button">Copy bookmark code</button>
             </div>
             <p class="muted" id="selarHelperCopyStatus" hidden></p>
             <p class="muted capture-hint">
-              Paste only into the Selar Console — never into Google or the address bar.
+              Desktop: drag the button to your bookmarks bar. If dragging does not work, copy the bookmark code and paste it into a new bookmark's URL field.
             </p>
           </div>
 
