@@ -42,6 +42,7 @@
       position: "fixed",
       zIndex: "2147483647",
       right: "12px",
+      left: "auto",
       bottom: "12px",
       width: "min(320px, calc(100vw - 24px))",
       background: "#121820",
@@ -114,33 +115,24 @@
     return r.width * r.height;
   }
 
-  function grabPageCanvas() {
-    const nodes = [...document.querySelectorAll("canvas, img")].filter((el) => {
-      if (el.closest("#rg-selar-helper")) return false;
-      return visibleScore(el) > 0;
-    });
-    nodes.sort((a, b) => visibleScore(b) - visibleScore(a));
-    const top = nodes[0];
-    if (!top) return null;
-
+  function elementToCanvas(el) {
     const canvas = document.createElement("canvas");
-    if (top.tagName === "CANVAS") {
-      canvas.width = top.width || top.clientWidth;
-      canvas.height = top.height || top.clientHeight;
-      canvas.getContext("2d").drawImage(top, 0, 0);
+    if (el.tagName === "CANVAS") {
+      canvas.width = el.width || el.clientWidth;
+      canvas.height = el.height || el.clientHeight;
+      canvas.getContext("2d").drawImage(el, 0, 0);
     } else {
-      const w = top.naturalWidth || top.width || top.clientWidth;
-      const h = top.naturalHeight || top.height || top.clientHeight;
+      const w = el.naturalWidth || el.width || el.clientWidth;
+      const h = el.naturalHeight || el.height || el.clientHeight;
       canvas.width = w;
       canvas.height = h;
       try {
-        canvas.getContext("2d").drawImage(top, 0, 0, w, h);
+        canvas.getContext("2d").drawImage(el, 0, 0, w, h);
       } catch {
         return null;
       }
     }
 
-    // Crop edges to reduce toolbar / dark margins noise.
     const cw = canvas.width;
     const ch = canvas.height;
     const x = Math.floor(cw * 0.04);
@@ -152,6 +144,75 @@
     cropped.height = h;
     cropped.getContext("2d").drawImage(canvas, x, y, w, h, 0, 0, w, h);
     return cropped;
+  }
+
+  function findVisiblePages() {
+    const candidates = [...document.querySelectorAll("canvas, img")].filter((el) => {
+      if (el.closest("#rg-selar-helper")) return false;
+      const r = el.getBoundingClientRect();
+      if (r.width < 120 || r.height < 200) return false;
+      if (r.bottom < 40 || r.top > innerHeight - 40) return false;
+      if (r.right < 0 || r.left > innerWidth) return false;
+      const area = r.width * r.height;
+      if (area < 40000) return false;
+      return true;
+    });
+
+    candidates.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+
+    const pages = [];
+    for (const el of candidates) {
+      const r = el.getBoundingClientRect();
+      const dup = pages.some((p) => {
+        const pr = p.getBoundingClientRect();
+        const overlapX = Math.min(r.right, pr.right) - Math.max(r.left, pr.left);
+        const overlapY = Math.min(r.bottom, pr.bottom) - Math.max(r.top, pr.top);
+        return overlapX > r.width * 0.5 && overlapY > r.height * 0.5;
+      });
+      if (!dup) pages.push(el);
+    }
+
+    if (!pages.length) return [];
+
+    const heights = pages.map((p) => p.getBoundingClientRect().height);
+    const medianH = heights.sort((a, b) => a - b)[Math.floor(heights.length / 2)];
+
+    return pages.filter((p) => {
+      const h = p.getBoundingClientRect().height;
+      return h >= medianH * 0.65;
+    });
+  }
+
+  function combineCanvases(canvases) {
+    if (!canvases.length) return null;
+    if (canvases.length === 1) return canvases[0];
+
+    const gap = 8;
+    const totalW = canvases.reduce((sum, c, i) => sum + c.width + (i ? gap : 0), 0);
+    const maxH = Math.max(...canvases.map((c) => c.height));
+    const combined = document.createElement("canvas");
+    combined.width = totalW;
+    combined.height = maxH;
+    const ctx = combined.getContext("2d");
+    let x = 0;
+    for (const c of canvases) {
+      const y = Math.floor((maxH - c.height) / 2);
+      ctx.drawImage(c, x, y);
+      x += c.width + gap;
+    }
+    return combined;
+  }
+
+  function grabPageCanvas() {
+    const pages = findVisiblePages();
+    if (!pages.length) return null;
+
+    const canvases = pages.map(elementToCanvas).filter(Boolean);
+    return combineCanvases(canvases);
+  }
+
+  function spreadCount() {
+    return findVisiblePages().length;
   }
 
   function pageFingerprint() {
@@ -281,7 +342,12 @@
 
       state.page += 1;
       const n = state.page;
-      status(`Page ${n}: capturing what’s on screen…`);
+      const spread = spreadCount();
+      status(
+        spread > 1
+          ? `Spread ${n}: capturing ${spread} pages (left + right)…`
+          : `Page ${n}: capturing what’s on screen…`
+      );
       await sleep(400);
 
       const canvas = grabPageCanvas();
@@ -290,7 +356,11 @@
         break;
       }
 
-      status(`Page ${n}: reading text…`);
+      status(
+        spread > 1
+          ? `Spread ${n}: reading both pages…`
+          : `Page ${n}: reading text…`
+      );
       let text = "";
       try {
         text = await ocrCanvas(canvas);
@@ -311,7 +381,9 @@
         break;
       }
 
-      status(`Page ${n}: listening…`);
+      status(
+        spread > 1 ? `Spread ${n}: listening to both pages…` : `Page ${n}: listening…`
+      );
       const spoken = await speak(text);
       if (!state.running || spoken.aborted) break;
 
@@ -354,5 +426,5 @@
 
   window.__rgSelarHelper = { stop, start, get running() { return state.running; } };
   ui();
-  status("Tap Start — it will read THIS page, then auto-flip.");
+  status("Tap Start — reads left + right pages, then auto-flips.");
 })();
