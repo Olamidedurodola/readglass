@@ -248,6 +248,15 @@
       .join("|");
   }
 
+  function currentPageNumbers() {
+    const label = document.body.innerText.match(/(\d+)\s*\/\s*(\d+)/);
+    if (!label) return null;
+    return {
+      left: Number(label[1]),
+      right: Number(label[2]),
+    };
+  }
+
   async function ocrCanvas(canvas) {
     const result = await window.Tesseract.recognize(canvas, "eng");
     return String(result?.data?.text || "")
@@ -300,11 +309,6 @@
   }
 
   function flipNext() {
-    const keyOpts = { key: "ArrowRight", code: "ArrowRight", keyCode: 39, which: 39, bubbles: true, cancelable: true };
-    document.dispatchEvent(new KeyboardEvent("keydown", keyOpts));
-    window.dispatchEvent(new KeyboardEvent("keydown", keyOpts));
-    document.body?.dispatchEvent(new KeyboardEvent("keydown", keyOpts));
-
     const candidates = [...document.querySelectorAll("button,a,[role='button'],div,span")];
     for (const el of candidates) {
       if (el.closest("#rg-selar-helper")) continue;
@@ -325,14 +329,33 @@
       toolbarHits[0].click();
       return true;
     }
-    return false;
+
+    // Final fallback: a single ArrowRight event.
+    const keyOpts = { key: "ArrowRight", code: "ArrowRight", keyCode: 39, which: 39, bubbles: true, cancelable: true };
+    document.dispatchEvent(new KeyboardEvent("keydown", keyOpts));
+    window.dispatchEvent(new KeyboardEvent("keydown", keyOpts));
+    document.body?.dispatchEvent(new KeyboardEvent("keydown", keyOpts));
+    return true;
   }
 
-  async function waitForPageChange(prev) {
+  async function waitForPageChange(prev, prevNums = null) {
     for (let i = 0; i < 40; i += 1) {
       await sleep(250);
       if (!state.running) return false;
       if (pageFingerprint() !== prev) {
+        const now = currentPageNumbers();
+        if (prevNums && now) {
+          const jumpedLeft = now.left - prevNums.left;
+          const jumpedRight = now.right - prevNums.right;
+          if (jumpedLeft > 2 || jumpedRight > 2) {
+            status(
+              `Selar jumped too far (${prevNums.left}/${prevNums.right} -> ${now.left}/${now.right}). Stopping auto-flip.`
+            );
+            state.running = false;
+            speechSynthesis.cancel();
+            return false;
+          }
+        }
         await sleep(500);
         return true;
       }
@@ -393,8 +416,9 @@
         status(`Spread ${n}: little/no text (cover?). Flipping…`);
         if (autoFlipOn()) {
           const prev = pageFingerprint();
+          const prevNums = currentPageNumbers();
           flipNext();
-          await waitForPageChange(prev);
+          await waitForPageChange(prev, prevNums);
           continue;
         }
         break;
@@ -424,9 +448,11 @@
 
       status(`Page ${n} done — flipping…`);
       const prev = pageFingerprint();
+      const prevNums = currentPageNumbers();
       flipNext();
-      const changed = await waitForPageChange(prev);
+      const changed = await waitForPageChange(prev, prevNums);
       if (!changed) {
+        if (!state.running) break;
         status("Could not auto-flip. Click > once on Selar, helper will continue…");
         const manualPrev = pageFingerprint();
         for (let i = 0; i < 120 && state.running; i += 1) {
