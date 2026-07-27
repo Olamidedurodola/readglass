@@ -67,7 +67,6 @@ const els = {
   autoResnapBtn: document.getElementById("autoResnapBtn"),
   autoNextPageBtn: document.getElementById("autoNextPageBtn"),
   stopAutoListenBtn: document.getElementById("stopAutoListenBtn"),
-  selarBookmarkletLink: document.getElementById("selarBookmarkletLink"),
   copySelarHelperBtn: document.getElementById("copySelarHelperBtn"),
   selarHelperCopyStatus: document.getElementById("selarHelperCopyStatus"),
   captureTitle: document.getElementById("captureTitle"),
@@ -208,9 +207,6 @@ function openListenSetup() {
   } else {
     els.startAutoListenBtn.disabled = false;
     els.autoListenStatus.textContent = "Ready when you are.";
-  }
-  if (els.selarBookmarkletLink) {
-    els.selarBookmarkletLink.href = `javascript:${encodeURIComponent(getSelarHelperLauncher())}`;
   }
   showView("listenSetup");
 }
@@ -736,16 +732,16 @@ function wireEvents() {
   });
 
   els.copySelarHelperBtn?.addEventListener("click", async () => {
-    const line = `javascript:${encodeURIComponent(getSelarHelperLauncher())}`;
+    const line = getSelarHelperLauncher();
     try {
       await navigator.clipboard.writeText(line);
       els.selarHelperCopyStatus.hidden = false;
       els.selarHelperCopyStatus.textContent =
-        "Copied. Create a bookmark and paste this into the bookmark URL, then open that bookmark on Selar.";
+        "Copied. On Selar: F12 → Console → paste → Enter. Then tap Start on the green panel.";
     } catch {
       els.selarHelperCopyStatus.hidden = false;
-      els.selarHelperCopyStatus.textContent = "Could not copy automatically. Copy this bookmark code manually:";
-      prompt("Copy this bookmark code:", line);
+      els.selarHelperCopyStatus.textContent = "Could not copy automatically:";
+      prompt("Paste this into the Selar Console:", line);
     }
   });
 
