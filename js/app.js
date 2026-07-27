@@ -10,7 +10,7 @@ import {
 } from "./db.js";
 import { ScreenSession, recognizeImage, supportsScreenCapture } from "./ocr.js";
 import { createNarrator } from "./speech.js";
-import { getBookmarkletHref } from "./bookmarklet.js";
+import { speakUntilDone } from "./speak.js";
 
 const THEMES = ["night", "paper", "sepia"];
 const FONT_MIN = 1;
@@ -29,6 +29,11 @@ const state = {
   fontSize: Number(localStorage.getItem("rg-font") || 1.2),
   theme: localStorage.getItem("rg-theme") || "night",
   autoListen: false,
+  autoSession: false,
+  autoWaiting: false,
+  autoAbort: null,
+  autoContinue: null,
+  autoPageCount: 0,
 };
 
 const screenSession = new ScreenSession();
@@ -53,13 +58,12 @@ const els = {
   bookGrid: document.getElementById("bookGrid"),
   libraryEmpty: document.getElementById("libraryEmpty"),
   bookCount: document.getElementById("bookCount"),
-  bookmarkletLink: document.getElementById("bookmarkletLink"),
-  copyBookmarkletBtn: document.getElementById("copyBookmarkletBtn"),
-  bookmarkCopyStatus: document.getElementById("bookmarkCopyStatus"),
-  pasteListenText: document.getElementById("pasteListenText"),
-  speakPasteBtn: document.getElementById("speakPasteBtn"),
-  savePasteBtn: document.getElementById("savePasteBtn"),
-  newBookFromListenBtn: document.getElementById("newBookFromListenBtn"),
+  autoListenStatus: document.getElementById("autoListenStatus"),
+  autoListenVideo: document.getElementById("autoListenVideo"),
+  autoSavePages: document.getElementById("autoSavePages"),
+  startAutoListenBtn: document.getElementById("startAutoListenBtn"),
+  autoNextPageBtn: document.getElementById("autoNextPageBtn"),
+  stopAutoListenBtn: document.getElementById("stopAutoListenBtn"),
   captureTitle: document.getElementById("captureTitle"),
   captureHint: document.getElementById("captureHint"),
   captureTargets: document.getElementById("captureTargets"),
@@ -179,6 +183,7 @@ function applyFont() {
 function showView(view) {
   if (view !== "reader") stopListening();
   if (view !== "capture") stopLiveSession();
+  if (view !== "listenSetup") stopAutoListenSession();
   state.view = view;
   els.libraryView.hidden = view !== "library";
   els.listenSetupView.hidden = view !== "listenSetup";
@@ -190,10 +195,153 @@ function showView(view) {
 }
 
 function openListenSetup() {
-  if (els.bookmarkletLink) {
-    els.bookmarkletLink.href = getBookmarkletHref();
+  if (!supportsScreenCapture()) {
+    els.autoListenStatus.textContent =
+      "Auto Listen needs a computer with Chrome. Open ReadGlass on your laptop/PC.";
+    els.startAutoListenBtn.disabled = true;
+  } else {
+    els.startAutoListenBtn.disabled = false;
+    els.autoListenStatus.textContent = "Ready when you are.";
   }
   showView("listenSetup");
+}
+
+function setAutoStatus(msg) {
+  if (els.autoListenStatus) els.autoListenStatus.textContent = msg;
+}
+
+function stopAutoListenSession() {
+  state.autoSession = false;
+  state.autoWaiting = false;
+  if (state.autoAbort) {
+    state.autoAbort.abort();
+    state.autoAbort = null;
+  }
+  if (state.autoContinue) {
+    state.autoContinue();
+    state.autoContinue = null;
+  }
+  speechSynthesis?.cancel?.();
+  screenSession.stop();
+  if (els.autoListenVideo) {
+    els.autoListenVideo.srcObject = null;
+    els.autoListenVideo.hidden = true;
+  }
+  if (els.startAutoListenBtn) els.startAutoListenBtn.hidden = false;
+  if (els.autoNextPageBtn) els.autoNextPageBtn.hidden = true;
+  if (els.stopAutoListenBtn) els.stopAutoListenBtn.hidden = true;
+}
+
+function waitForNextPageAction() {
+  return new Promise((resolve) => {
+    state.autoWaiting = true;
+    state.autoContinue = () => {
+      state.autoWaiting = false;
+      state.autoContinue = null;
+      resolve();
+    };
+    els.autoNextPageBtn.hidden = false;
+    els.autoNextPageBtn.focus();
+  });
+}
+
+async function runAutoListenSession() {
+  if (!supportsScreenCapture()) {
+    alert("Auto Listen only works on a computer with Chrome.");
+    return;
+  }
+
+  stopAutoListenSession();
+  state.autoSession = true;
+  state.autoPageCount = 0;
+  state.autoAbort = new AbortController();
+
+  els.startAutoListenBtn.hidden = true;
+  els.stopAutoListenBtn.hidden = false;
+  els.autoNextPageBtn.hidden = true;
+  setAutoStatus("Choose the Selar Chrome tab to share…");
+
+  try {
+    const video = await screenSession.start();
+    els.autoListenVideo.hidden = false;
+    els.autoListenVideo.srcObject = video.srcObject;
+  } catch (error) {
+    stopAutoListenSession();
+    if (error?.name === "NotAllowedError") {
+      setAutoStatus("Sharing cancelled. Tap Start Auto Listen to try again.");
+      return;
+    }
+    setAutoStatus(error.message || "Could not share screen.");
+    alert(error.message || "Could not share screen.");
+    return;
+  }
+
+  let bookId = null;
+  if (els.autoSavePages?.checked) {
+    bookId = (await createBook(`Selar ${formatDate(Date.now())}`)).id;
+    state.captureBookId = bookId;
+    state.currentBookId = bookId;
+  }
+
+  while (state.autoSession && screenSession.active) {
+    state.autoPageCount += 1;
+    const n = state.autoPageCount;
+    setAutoStatus(`Page ${n}: reading text from screen…`);
+    els.autoNextPageBtn.hidden = true;
+
+    let text = "";
+    try {
+      const blob = await screenSession.snap();
+      text = await recognizeImage(blob, (progress) => {
+        setAutoStatus(`Page ${n}: reading text… ${Math.round(progress * 100)}%`);
+      });
+    } catch (error) {
+      if (!state.autoSession) break;
+      setAutoStatus(error.message || "Could not read this page.");
+      alert(`${error.message || "Could not read this page."}\n\nFlip to a text page on Selar, then tap Next page.`);
+      await waitForNextPageAction();
+      continue;
+    }
+
+    if (!state.autoSession) break;
+
+    if (!text) {
+      setAutoStatus(`Page ${n}: no text found (cover/image?). Flip to a text page, then Next page.`);
+      await waitForNextPageAction();
+      continue;
+    }
+
+    if (bookId) {
+      try {
+        await addPage(bookId, text);
+      } catch {
+        /* keep listening even if save fails */
+      }
+    }
+
+    setAutoStatus(`Page ${n}: listening…`);
+    const result = await speakUntilDone(text, {
+      rate: narrator.getRate(),
+      signal: state.autoAbort.signal,
+    });
+    if (!state.autoSession || result?.aborted) break;
+
+    setAutoStatus(
+      `Page ${n} done. Click > on Selar to turn the page, then tap Next page here (or press Space).`
+    );
+    await waitForNextPageAction();
+  }
+
+  const finishedPages = state.autoPageCount;
+  stopAutoListenSession();
+  setAutoStatus(
+    finishedPages
+      ? `Stopped after ${finishedPages} page${finishedPages === 1 ? "" : "s"}.`
+      : "Ready when you are."
+  );
+  if (bookId) {
+    await refreshLibrary();
+  }
 }
 
 function formatDate(ts) {
@@ -334,7 +482,7 @@ function showLiveSession(videoEl) {
   els.captureTargets.hidden = true;
   els.liveSession.hidden = false;
   els.liveVideo.srcObject = videoEl.srcObject;
-  els.liveStatus.textContent = "Connected — open Stelar, then Snap page";
+  els.liveStatus.textContent = "Connected — open Selar, then Snap page";
   els.previewWrap.hidden = true;
   els.textEditor.hidden = true;
 }
@@ -347,7 +495,7 @@ function configureCaptureOptions() {
   if (els.captureHint) {
     els.captureHint.textContent = canScreen
       ? "Phone: add screenshots from your browser. Computer: Live screen also works."
-      : "Screenshot Stelar in your browser, then tap Add screenshot.";
+      : "Screenshot Selar in your browser, then tap Add screenshot.";
   }
 }
 
@@ -362,7 +510,7 @@ async function pasteImageFromClipboard() {
     const blob = await item.getType(type);
     return blob;
   }
-  throw new Error("No image on the clipboard. Screenshot Stelar in Chrome, copy it, then Paste.");
+  throw new Error("No image on the clipboard. Screenshot Selar in Chrome, copy it, then Paste.");
 }
 
 function openCapture(bookId, title) {
@@ -375,7 +523,7 @@ function openCapture(bookId, title) {
 
 async function startLiveScreen() {
   try {
-    els.liveStatus.textContent = "Choose the Stelar Chrome tab…";
+    els.liveStatus.textContent = "Choose the Selar Chrome tab…";
     const video = await screenSession.start();
     showLiveSession(video);
   } catch (error) {
@@ -442,7 +590,7 @@ async function runOcr(blobOrFile, { fromLive = false } = {}) {
 
 async function ensureCaptureBook() {
   if (state.captureBookId) return state.captureBookId;
-  const book = await createBook(`Stelar ${formatDate(Date.now())}`);
+  const book = await createBook(`Selar ${formatDate(Date.now())}`);
   state.captureBookId = book.id;
   state.currentBookId = book.id;
   return book.id;
@@ -467,7 +615,7 @@ async function saveCapturedPage({ continueLive = false } = {}) {
     els.saveNextBtn.hidden = true;
     els.ocrText.value = "";
     els.liveSession.hidden = false;
-    els.liveStatus.textContent = "Saved — flip the page in Stelar, then Snap";
+    els.liveStatus.textContent = "Saved — flip the page in Selar, then Snap";
     return;
   }
 
@@ -519,57 +667,26 @@ function wireEvents() {
   });
 
   els.justListenBtn?.addEventListener("click", () => openListenSetup());
-  els.bookmarkletLink?.addEventListener("click", (event) => {
-    // This link is meant to be bookmarked, not opened as a page.
-    event.preventDefault();
-    els.bookmarkCopyStatus.hidden = false;
-    els.bookmarkCopyStatus.textContent = "Don’t open it here — drag to bookmarks, or tap Copy bookmark code.";
-  });
-  els.newBookFromListenBtn?.addEventListener("click", () => {
-    els.newBookTitle.value = "";
-    els.newBookModal.showModal();
-    els.newBookTitle.focus();
+
+  els.startAutoListenBtn?.addEventListener("click", () => {
+    runAutoListenSession();
   });
 
-  els.copyBookmarkletBtn?.addEventListener("click", async () => {
-    const href = getBookmarkletHref();
-    try {
-      await navigator.clipboard.writeText(href);
-      els.bookmarkCopyStatus.hidden = false;
-      els.bookmarkCopyStatus.textContent = "Copied. Create a bookmark and paste this as the URL.";
-    } catch {
-      els.bookmarkCopyStatus.hidden = false;
-      els.bookmarkCopyStatus.textContent = "Could not copy. Long-press the Listen page button and copy the link.";
-    }
+  els.autoNextPageBtn?.addEventListener("click", () => {
+    if (state.autoContinue) state.autoContinue();
   });
 
-  els.speakPasteBtn?.addEventListener("click", () => {
-    const text = els.pasteListenText.value.trim();
-    if (!text) {
-      alert("Paste some chapter text first.");
-      return;
-    }
-    try {
-      state.autoListen = false;
-      narrator.speak(text, { continueBook: false });
-    } catch (error) {
-      alert(error.message || "Could not start listening.");
-    }
+  els.stopAutoListenBtn?.addEventListener("click", () => {
+    stopAutoListenSession();
+    setAutoStatus("Stopped. Tap Start Auto Listen to begin again.");
   });
 
-  els.savePasteBtn?.addEventListener("click", async () => {
-    const text = els.pasteListenText.value.trim();
-    if (!text) {
-      alert("Paste some chapter text first.");
-      return;
+  window.addEventListener("keydown", (event) => {
+    if (state.view !== "listenSetup" || !state.autoWaiting) return;
+    if (event.code === "Space" || event.code === "Enter") {
+      event.preventDefault();
+      if (state.autoContinue) state.autoContinue();
     }
-    const bookId = state.captureBookId || state.currentBookId || (await createBook(`Stelar ${formatDate(Date.now())}`)).id;
-    state.captureBookId = bookId;
-    state.currentBookId = bookId;
-    await addPage(bookId, text);
-    els.pasteListenText.value = "";
-    await refreshLibrary();
-    await openBook(bookId);
   });
 
   els.newBookBtn?.addEventListener("click", () => {

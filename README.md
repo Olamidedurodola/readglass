@@ -1,35 +1,28 @@
 # ReadGlass
 
-Personal PWA that turns screen captures and photos into readable text pages. Everything stays on your device.
+Personal PWA for listening to Selar (and similar) books you already own.
 
-## Features
+## Auto Listen (long Selar books)
 
-- Capture from **screen share** (desktop), **camera**, or **screenshot upload**
-- On-device OCR with [Tesseract.js](https://tesseract.projectnaptha.com/)
-- Library of books/pages stored in IndexedDB
-- Clean reader with font size + night / paper / sepia themes
-- **Listen** mode (browser text-to-speech) with speed control and auto-advance
-- Installable as a Progressive Web App
+Selar flipbooks are page **images**, not copyable text. Screenshotting 1000+ pages is not practical.
 
-## Use it with long books (no screenshots)
+1. On a **computer with Chrome**, open your book on [selar.com](https://selar.com)
+2. Open ReadGlass → **Auto Listen** → **Start Auto Listen**
+3. Share the **Selar** Chrome tab
+4. When a page finishes, click **>** on Selar, then **Next page** in ReadGlass (or press Space)
 
-1. Open ReadGlass → **Just listen**
-2. Install the **Listen page** bookmark
-3. Open Stelar in the browser, open a chapter, tap the bookmark → **Listen**
-4. Keep **Auto next** on to continue through chapters
+Do **not** paste any bookmark/JavaScript code into Google.
 
-Or paste chapter text into ReadGlass and tap **Listen now**.
+## Screenshots (short sections only)
+
+Use **Screenshots** for a few pages on phone if needed.
 
 ## Local preview
-
-Serve the folder over HTTPS or localhost (required for camera / screen capture):
 
 ```bash
 npx --yes serve .
 ```
 
-Then open the printed URL.
-
 ## Deploy
 
-This repo is set up for **GitHub Pages** from the `main` branch root.
+GitHub Pages from the `main` branch root.

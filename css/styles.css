@@ -309,6 +309,34 @@ button {
   margin-top: 0.35rem;
 }
 
+.stelar-guide .guide-note {
+  margin: 0.55rem 0 0;
+  color: var(--ink-muted);
+  font-size: 0.94rem;
+  line-height: 1.45;
+}
+
+.plain-steps {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--ink-muted);
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+.plain-steps li + li {
+  margin-top: 0.45rem;
+}
+
+.rg-check {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  color: var(--ink-muted);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
 .bookmarklet-link {
   display: inline-flex;
   text-decoration: none;

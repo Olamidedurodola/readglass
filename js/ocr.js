@@ -19,7 +19,7 @@ export function supportsScreenCapture() {
 
 /**
  * Keeps a screen/tab share open so the user can snap many pages
- * (e.g. Stelar website in Chrome) without re-prompting each time.
+ * (e.g. Selar website in Chrome) without re-prompting each time.
  */
 export class ScreenSession {
   constructor() {
@@ -36,13 +36,13 @@ export class ScreenSession {
   async start() {
     if (!supportsScreenCapture()) {
       throw new Error(
-        "Live screen reading needs desktop Chrome. On phones, open Stelar in Chrome and use Screenshot."
+        "Live screen reading needs desktop Chrome. On phones, open Selar in Chrome and use Screenshot."
       );
     }
 
     this.stop();
 
-    // Prefer another tab/window (Stelar), not the ReadGlass tab.
+    // Prefer another tab/window (Selar), not the ReadGlass tab.
     const attempts = [
       {
         video: { displaySurface: "browser", frameRate: 5 },
@@ -98,7 +98,7 @@ export class ScreenSession {
 
   async snap() {
     if (!this.active || !this.video) {
-      throw new Error("Screen share ended. Start Live screen again and pick the Stelar Chrome tab.");
+      throw new Error("Screen share ended. Start Live screen again and pick the Selar Chrome tab.");
     }
 
     await new Promise((r) => setTimeout(r, 120));
@@ -106,7 +106,7 @@ export class ScreenSession {
     const width = this.video.videoWidth || 1280;
     const height = this.video.videoHeight || 720;
     if (width < 2 || height < 2) {
-      throw new Error("Could not read the shared screen. Try sharing the Stelar Chrome tab again.");
+      throw new Error("Could not read the shared screen. Try sharing the Selar Chrome tab again.");
     }
 
     const canvas = document.createElement("canvas");
@@ -123,7 +123,7 @@ export class ScreenSession {
     }
     if (lit < 3) {
       throw new Error(
-        "That tab looks blank (capture blocked). Open Stelar in Chrome and use an OS screenshot instead."
+        "That tab looks blank (capture blocked). Open Selar in Chrome and use an OS screenshot instead."
       );
     }
 

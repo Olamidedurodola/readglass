@@ -55,9 +55,9 @@
         <section class="view" id="libraryView">
           <div class="hero">
             <h1 class="hero-brand">ReadGlass</h1>
-            <p class="hero-copy">For long books: listen on the page — no screenshots needed.</p>
+            <p class="hero-copy">Listen to Selar books page by page — no screenshots.</p>
             <div class="hero-actions">
-              <button class="btn btn-primary" id="justListenBtn">Just listen</button>
+              <button class="btn btn-primary" id="justListenBtn">Auto Listen</button>
               <button class="btn btn-ghost" id="quickCaptureBtn">Screenshots</button>
             </div>
           </div>
@@ -67,52 +67,66 @@
           </div>
           <div class="book-grid" id="bookGrid"></div>
           <p class="empty" id="libraryEmpty" hidden>
-            No books yet. Tap <strong>Just listen</strong> for long books.
+            Tap <strong>Auto Listen</strong> to hear your Selar book on a computer.
           </p>
           <div class="hero-actions" style="margin-top: 0.75rem">
             <button class="btn btn-ghost" id="newBookBtn" type="button">New book</button>
           </div>
         </section>
 
-        <!-- Just listen -->
+        <!-- Auto Listen for Selar flipbooks -->
         <section class="view" id="listenSetupView" hidden>
           <div class="section-head">
-            <h2>Listen without screenshots</h2>
+            <h2>Auto Listen</h2>
           </div>
+
           <aside class="stelar-guide">
-            <strong>Best for 1000+ pages</strong>
-            <ol>
-              <li>Open your book in the <em>browser</em> (Stelar website), not the app.</li>
-              <li>Install the Listen bookmark (below).</li>
-              <li>On each chapter page, tap the bookmark → <strong>Listen</strong>.</li>
-              <li>Leave <em>Auto next</em> on to continue when a chapter ends.</li>
-            </ol>
+            <strong>This is for Selar books like yours</strong>
+            <p class="guide-note">
+              Selar shows pages as <em>pictures</em> (your book is ~1400+ pages). A bookmark cannot read that.
+              Do <strong>not</strong> paste any code into Google.
+            </p>
+            <p class="guide-note">
+              You need a <strong>computer with Chrome</strong>. Phones cannot auto-listen through a whole Selar flipbook.
+            </p>
           </aside>
 
           <div class="listen-setup-card">
-            <h3>1. Install Listen bookmark</h3>
-            <p class="muted">
-              Drag this button to your bookmarks bar (desktop). On phone: copy the link, create a new bookmark, paste it as the URL.
+            <h3>How to start (computer)</h3>
+            <ol class="plain-steps">
+              <li>On your computer, open your book in Chrome: <em>selar.com</em> (browser, not the app).</li>
+              <li>Keep that Selar tab open.</li>
+              <li>In this ReadGlass tab, tap <strong>Start Auto Listen</strong> below.</li>
+              <li>When Chrome asks what to share, pick the <strong>Selar</strong> tab (not ReadGlass).</li>
+              <li>ReadGlass will read the page aloud. When it finishes, click <strong>&gt;</strong> on Selar to turn the page, then tap <strong>Next page</strong> here (or press Space).</li>
+              <li>Repeat until you’re done — or tap Stop.</li>
+            </ol>
+          </div>
+
+          <div class="listen-setup-card" id="autoListenPanel">
+            <h3>Controls</h3>
+            <p class="muted" id="autoListenStatus">Ready when you are.</p>
+            <video id="autoListenVideo" class="live-video" muted playsinline autoplay hidden></video>
+            <label class="rg-check">
+              <input type="checkbox" id="autoSavePages" />
+              Also save each page’s text into your library
+            </label>
+            <div class="editor-actions">
+              <button class="btn btn-primary" id="startAutoListenBtn" type="button">Start Auto Listen</button>
+              <button class="btn btn-ghost" id="autoNextPageBtn" type="button" hidden>Next page</button>
+              <button class="btn btn-ghost" id="stopAutoListenBtn" type="button" hidden>Stop</button>
+            </div>
+            <p class="muted capture-hint" id="autoListenHint">
+              Tip: put Selar on one half of the screen and ReadGlass on the other.
             </p>
-            <a class="btn btn-primary bookmarklet-link" id="bookmarkletLink" href="#">Listen page</a>
-            <button class="btn btn-ghost" id="copyBookmarkletBtn" type="button">Copy bookmark code</button>
-            <p class="muted" id="bookmarkCopyStatus" hidden></p>
           </div>
 
           <div class="listen-setup-card">
-            <h3>2. Or paste chapter text</h3>
-            <p class="muted">If you can copy text from the chapter, paste it here and listen immediately.</p>
-            <textarea id="pasteListenText" rows="10" placeholder="Paste chapter text here…"></textarea>
-            <div class="editor-actions">
-              <button class="btn btn-ghost" id="savePasteBtn" type="button">Save to library</button>
-              <button class="btn btn-primary" id="speakPasteBtn" type="button">Listen now</button>
-            </div>
+            <h3>On your phone?</h3>
+            <p class="muted">
+              Auto Listen needs a computer. On phone you can only screenshot a few pages, or use your computer and leave it playing.
+            </p>
           </div>
-
-          <p class="muted capture-hint">
-            Screenshots are only for short bits. A full book needs Listen-on-page or pasted text.
-          </p>
-          <button class="btn btn-ghost" id="newBookFromListenBtn" type="button">New book in library</button>
         </section>
 
         <!-- Capture -->
@@ -122,14 +136,14 @@
           </div>
 
           <aside class="stelar-guide" id="stelarGuide">
-            <strong>Stelar on phone</strong>
+            <strong>Selar on phone</strong>
             <ol>
-              <li>Open Stelar in your <em>mobile browser</em> (Chrome/Safari) — not the Stelar app.</li>
+              <li>Open Selar in your <em>mobile browser</em> — not the Selar app.</li>
               <li>Screenshot the page.</li>
               <li>Tap <strong>Add screenshot</strong> below and pick it (you can select several).</li>
             </ol>
             <p class="guide-note muted" id="desktopGuideNote" hidden>
-              On a computer you can also use <strong>Live screen</strong> to share the Stelar Chrome tab.
+              On a computer, prefer <strong>Auto Listen</strong> for long books instead of screenshots.
             </p>
           </aside>
 
@@ -147,7 +161,7 @@
             </button>
             <button class="capture-card" id="screenCaptureBtn" type="button" hidden>
               <strong>Live screen</strong>
-              <span>Desktop: share Stelar’s Chrome tab and snap pages</span>
+              <span>Desktop: share Selar’s Chrome tab and snap pages</span>
             </button>
             <label class="capture-card" for="cameraInput">
               <strong>Camera</strong>
@@ -159,11 +173,11 @@
           <div class="live-session" id="liveSession" hidden>
             <div class="live-head">
               <strong>Live screen</strong>
-              <span class="muted" id="liveStatus">Share the Stelar tab in Chrome</span>
+              <span class="muted" id="liveStatus">Share the Selar tab in Chrome</span>
             </div>
             <video id="liveVideo" class="live-video" muted playsinline autoplay></video>
             <p class="live-tip muted">
-              Flip to the next page in Stelar, then tap Snap. If the preview is black, use Chrome screenshot instead.
+              Flip to the next page in Selar, then tap Snap. If the preview is black, use Chrome screenshot instead.
             </p>
             <div class="editor-actions">
               <button class="btn btn-ghost" id="stopLiveBtn" type="button">Stop sharing</button>
