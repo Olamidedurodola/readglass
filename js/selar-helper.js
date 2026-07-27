@@ -21,45 +21,57 @@
 
   function ui() {
     let panel = document.getElementById("rg-selar-helper");
+    // Replace a boot/loading stub so Start controls always appear.
+    if (panel && !panel.querySelector("[data-go]")) {
+      panel.remove();
+      panel = null;
+    }
     if (panel) return panel;
     panel = document.createElement("div");
     panel.id = "rg-selar-helper";
     panel.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
         <strong>ReadGlass · Selar</strong>
-        <button type="button" data-x style="border:0;background:0;color:#e7ecf2;font-size:20px;cursor:pointer">×</button>
+        <button type="button" data-x style="border:0;background:0;color:#e7ecf2;font-size:22px;line-height:1;cursor:pointer;min-width:36px;min-height:36px">×</button>
       </div>
-      <p data-s style="margin:8px 0;color:#9aa7b5;font-size:12px;line-height:1.4;min-height:3.2em">Ready</p>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <p data-s style="margin:8px 0;color:#9aa7b5;font-size:13px;line-height:1.4;min-height:3.2em">Ready</p>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         <button type="button" data-m>−</button>
         <button type="button" data-go style="flex:1;background:#5ec4b2;color:#06221d;border:0;font-weight:700">Start</button>
         <button type="button" data-f>+</button>
         <button type="button" data-stop>Stop</button>
       </div>
-      <label style="display:flex;gap:8px;margin-top:10px;font-size:12px;color:#9aa7b5">
+      <label style="display:flex;gap:8px;margin-top:10px;font-size:12px;color:#9aa7b5;align-items:center">
         <input type="checkbox" data-auto checked /> Auto flip after each page
       </label>
     `;
-    Object.assign(panel.style, {
-      position: "fixed",
-      zIndex: "2147483647",
-      right: MOBILE ? "auto" : "12px",
-      left: MOBILE ? "12px" : "auto",
-      bottom: MOBILE ? "auto" : "12px",
-      top: MOBILE ? "12px" : "auto",
-      width: "min(320px, calc(100vw - 24px))",
-      background: "#121820",
-      color: "#e7ecf2",
-      borderRadius: "16px",
-      padding: "12px",
-      font: "14px/1.4 system-ui,sans-serif",
-      boxShadow: "0 18px 50px rgba(0,0,0,.45)",
-      maxHeight: MOBILE ? "42vh" : "none",
-      overflow: "auto",
-    });
+    panel.style.cssText = [
+      "position:fixed!important",
+      "z-index:2147483647!important",
+      MOBILE ? "left:12px!important" : "right:12px!important",
+      MOBILE ? "top:max(12px,env(safe-area-inset-top))!important" : "bottom:12px!important",
+      MOBILE ? "right:auto!important" : "left:auto!important",
+      MOBILE ? "bottom:auto!important" : "top:auto!important",
+      "width:min(320px,calc(100vw - 24px))!important",
+      "background:#121820!important",
+      "color:#e7ecf2!important",
+      "border:1px solid rgba(94,196,178,.45)!important",
+      "border-radius:16px!important",
+      "padding:14px!important",
+      "font:14px/1.4 system-ui,sans-serif!important",
+      "box-shadow:0 18px 50px rgba(0,0,0,.55)!important",
+      MOBILE ? "max-height:46vh!important" : "",
+      "overflow:auto!important",
+      "pointer-events:auto!important",
+    ].filter(Boolean).join(";");
     panel.querySelectorAll("button").forEach((b) => {
       if (b.dataset.go) {
-        Object.assign(b.style, { minHeight: MOBILE ? "44px" : "", fontSize: MOBILE ? "15px" : "" });
+        Object.assign(b.style, {
+          minHeight: "44px",
+          fontSize: "15px",
+          borderRadius: "999px",
+          cursor: "pointer",
+        });
         return;
       }
       Object.assign(b.style, {
@@ -67,11 +79,12 @@
         background: "#1a222d",
         color: "#e7ecf2",
         borderRadius: "999px",
-        padding: "8px 12px",
+        padding: "10px 12px",
         cursor: "pointer",
+        minHeight: "44px",
       });
     });
-    document.documentElement.appendChild(panel);
+    (document.body || document.documentElement).appendChild(panel);
     panel.querySelector("[data-x]").onclick = () => stop(true);
     panel.querySelector("[data-stop]").onclick = () => stop(false);
     panel.querySelector("[data-go]").onclick = () => {

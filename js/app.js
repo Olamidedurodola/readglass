@@ -74,6 +74,7 @@ const els = {
   desktopSetupCard: document.getElementById("desktopSetupCard"),
   iosNoteCard: document.getElementById("iosNoteCard"),
   copyAndroidBookmarkBtn: document.getElementById("copyAndroidBookmarkBtn"),
+  previewAndroidPaneBtn: document.getElementById("previewAndroidPaneBtn"),
   androidBookmarkStatus: document.getElementById("androidBookmarkStatus"),
   autoListenPanel: document.getElementById("autoListenPanel"),
   captureTitle: document.getElementById("captureTitle"),
@@ -254,8 +255,11 @@ function getSelarHelperLauncher() {
   return `(()=>{const s=document.createElement('script');s.src='${url}?t='+Date.now();document.documentElement.appendChild(s);})();`;
 }
 
+/** Android bookmark: show floating panel immediately, then load helper. Desktop console stays on getSelarHelperLauncher(). */
 function getSelarAndroidBookmark() {
-  return `javascript:${encodeURIComponent(getSelarHelperLauncher())}`;
+  const url = new URL("./js/selar-helper.js", window.location.href).href;
+  const code = `(()=>{try{var old=document.getElementById('rg-selar-helper');if(old)old.remove();var box=document.createElement('div');box.id='rg-selar-helper';box.innerHTML='<div style="font-weight:700;margin-bottom:8px;color:#5ec4b2">ReadGlass · Selar</div><p style="margin:0;color:#9aa7b5;font-size:13px;line-height:1.4">Loading floating reader pane…</p>';box.style.cssText='position:fixed!important;z-index:2147483647!important;left:12px!important;top:max(12px,env(safe-area-inset-top))!important;width:min(320px,calc(100vw - 24px))!important;background:#121820!important;color:#e7ecf2!important;border:1px solid rgba(94,196,178,.5)!important;border-radius:16px!important;padding:14px!important;font:14px system-ui,sans-serif!important;box-shadow:0 18px 50px rgba(0,0,0,.55)!important;pointer-events:auto!important';(document.body||document.documentElement).appendChild(box);var s=document.createElement('script');s.src='${url}?t='+Date.now();s.onload=function(){};s.onerror=function(){box.innerHTML='<strong style="color:#5ec4b2">ReadGlass</strong><p style="color:#9aa7b5;font-size:13px;line-height:1.4;margin:8px 0 0">Could not load. Stay on selar.com, check internet, tap the bookmark again.</p>';alert('ReadGlass could not load the reader pane on this page.');};document.documentElement.appendChild(s);}catch(e){alert('ReadGlass error: '+(e&&e.message?e.message:e));}})();`;
+  return `javascript:${encodeURIComponent(code)}`;
 }
 
 function configureListenSetupForPlatform() {
@@ -269,6 +273,20 @@ function configureListenSetupForPlatform() {
 
   if (android && els.autoListenStatus) {
     els.autoListenStatus.textContent = "Use the Android bookmark on your Selar book page.";
+  }
+}
+
+function previewMobileReaderPane() {
+  const existing = document.getElementById("rg-selar-helper");
+  if (existing) existing.remove();
+  const s = document.createElement("script");
+  s.src = new URL("./js/selar-helper.js", window.location.href).href + `?t=${Date.now()}`;
+  s.onerror = () => alert("Could not load the reader pane preview.");
+  document.documentElement.appendChild(s);
+  if (els.androidBookmarkStatus) {
+    els.androidBookmarkStatus.hidden = false;
+    els.androidBookmarkStatus.textContent =
+      "Green panel should appear on this screen. On Selar, use your bookmark to open the same panel over the book.";
   }
 }
 
@@ -775,11 +793,15 @@ function wireEvents() {
       await navigator.clipboard.writeText(line);
       els.androidBookmarkStatus.hidden = false;
       els.androidBookmarkStatus.textContent =
-        "Copied. Create a bookmark on Selar and paste this into the bookmark URL field.";
+        "Copied. Edit your Selar bookmark URL, paste this whole text, save, then open that bookmark on the book page.";
     } catch {
       els.androidBookmarkStatus.hidden = false;
       prompt("Paste this as your bookmark URL on Selar:", line);
     }
+  });
+
+  els.previewAndroidPaneBtn?.addEventListener("click", () => {
+    previewMobileReaderPane();
   });
 
   window.addEventListener("keydown", (event) => {

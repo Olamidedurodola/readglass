@@ -90,19 +90,25 @@
 
           <div class="listen-setup-card" id="androidSetupCard" hidden>
             <h3>Android (Chrome)</h3>
+            <p class="guide-note muted">
+              The green floating panel opens <strong>on your Selar book page</strong> after you tap the bookmark — not inside ReadGlass.
+            </p>
             <ol class="plain-steps">
-              <li>Install ReadGlass: Chrome menu → <strong>Add to Home screen</strong>.</li>
               <li>Open your book on <em>selar.com</em> in Chrome (not the Selar app).</li>
-              <li>Tap <strong>Copy Android bookmark</strong> below.</li>
-              <li>Create a bookmark on Selar: ⋮ → <strong>Bookmarks</strong> → edit/add → paste into the <strong>URL</strong> field → save as <em>ReadGlass</em>.</li>
-              <li>On your book page, open that bookmark → tap <strong>Start</strong> on the green panel.</li>
+              <li>Tap the star / ⋮ → <strong>Bookmark</strong> this page.</li>
+              <li>Open Bookmarks → tap ⋮ on that bookmark → <strong>Edit</strong>.</li>
+              <li>Tap <strong>Copy Android bookmark</strong> below, then paste it into the bookmark’s <strong>URL</strong> field (replace the whole URL). Name it <em>ReadGlass</em>.</li>
+              <li>Go back to your book page → open the <em>ReadGlass</em> bookmark.</li>
+              <li>A green floating panel should appear → tap <strong>Start</strong>.</li>
             </ol>
             <div class="editor-actions">
               <button class="btn btn-primary" id="copyAndroidBookmarkBtn" type="button">Copy Android bookmark</button>
+              <button class="btn btn-ghost" id="previewAndroidPaneBtn" type="button">Preview green panel here</button>
             </div>
             <p class="muted" id="androidBookmarkStatus" hidden></p>
             <p class="muted capture-hint">
-              Selar shows one page at a time on phone — auto-flip moves one page forward each time.
+              If Chrome opens Google search instead of the panel, the bookmark URL was not saved as <code>javascript:…</code> — edit it again and paste the full copied text.
+              Firefox for Android also works well with this bookmark.
             </p>
           </div>
 
